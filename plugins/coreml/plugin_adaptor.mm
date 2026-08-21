@@ -9,14 +9,23 @@
 
 #include "tensorflow/lite/core/c/common.h"
 #include "tensorflow/lite/delegates/external/external_delegate_interface.h"
+#include <cerrno>
+#include <climits>
+
 #include "tensorflow/lite/delegates/coreml/coreml_delegate.h"
 
 namespace {
 
 bool ParseInt(const char* value, int* out) {
+    if (value == nullptr) return false;
     char* end = nullptr;
+    errno = 0;
     const long parsed = std::strtol(value, &end, 10);
     if (end == value || *end != '\0') return false;
+    // Without this a value past LONG_MAX comes back as LONG_MAX and one past
+    // INT_MAX wraps, so 4294967298 arrives as 2 and looks deliberate.
+    if (errno == ERANGE) return false;
+    if (parsed < INT_MIN || parsed > INT_MAX) return false;
     *out = static_cast<int>(parsed);
     return true;
 }
@@ -56,6 +65,13 @@ TFL_EXTERNAL_DELEGATE_EXPORT TfLiteDelegate* tflite_plugin_create_delegate(
     for (size_t i = 0; i < num_options; ++i) {
         const char* key = options_keys[i];
         const char* value = options_values[i];
+        // The ABI only promises the arrays themselves may be null when
+        // num_options is zero. A null element is a caller bug, and saying so
+        // beats dereferencing it.
+        if (key == nullptr || value == nullptr) {
+            Report(report_error, "delegate options contain a null entry");
+            return nullptr;
+        }
         bool ok;
         if (std::strcmp(key, "enabled_devices") == 0) {
             ok = ParseEnabledDevices(value, &options.enabled_devices);

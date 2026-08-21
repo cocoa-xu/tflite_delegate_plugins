@@ -19,6 +19,11 @@ option(TFLITE_PLUGINS_INSTALL "Generate install rules" ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# CMAKE_CXX_STANDARD does not govern Objective-C++, so without this the .mm
+# sources compile at whatever the compiler defaults to and can end up at a
+# different standard from the .cc sources in the same static library.
+set(CMAKE_OBJCXX_STANDARD 17)
+set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   # RelWithDebInfo rather than Release: the release workflow separates the debug

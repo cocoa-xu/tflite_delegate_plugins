@@ -55,6 +55,13 @@ TFL_EXTERNAL_DELEGATE_EXPORT TfLiteDelegate* tflite_plugin_create_delegate(
     for (size_t i = 0; i < num_options; ++i) {
         const char* key = options_keys[i];
         const char* value = options_values[i];
+        // The ABI only promises the arrays themselves may be null when
+        // num_options is zero. A null element is a caller bug, and saying so
+        // beats dereferencing it.
+        if (key == nullptr || value == nullptr) {
+            Report(report_error, "delegate options contain a null entry");
+            return nullptr;
+        }
         bool ok;
         if (std::strcmp(key, "allow_precision_loss") == 0) {
             ok = ParseBool(value, &options.allow_precision_loss);

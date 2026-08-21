@@ -7,6 +7,14 @@
 # Under -j it races and fails with "flatc: No such file or directory".
 if(TARGET inference_context_cc_fbs AND TARGET flatbuffers-flatc)
   add_dependencies(inference_context_cc_fbs flatbuffers-flatc)
+elseif(NOT TARGET inference_context_cc_fbs)
+  # Silence here would let the race back in on a TFLite bump that renames the
+  # target, and the symptom is an intermittent cold-build failure rather than
+  # anything pointing at this file.
+  message(WARNING
+    "inference_context_cc_fbs is gone from this TFLite. Either the flatc race "
+    "was fixed upstream, in which case delete this, or the target was renamed "
+    "and this fixup no longer applies.")
 endif()
 
 # The GPU sources reference absl logging but the tensorflow-lite target links

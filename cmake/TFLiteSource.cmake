@@ -5,6 +5,15 @@
 # that CMake 4 refuses outright. This has to be set before TFLite is added.
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
 
+# Recorded because TFLITE_VER only describes the download. A caller pointing at
+# their own tree can leave it at the default while building any version at all,
+# and the patch guards have to know they cannot trust it.
+if(TENSORFLOW_SOURCE_DIR STREQUAL "")
+  set(TFLITE_SOURCE_WAS_SUPPLIED FALSE CACHE INTERNAL "")
+else()
+  set(TFLITE_SOURCE_WAS_SUPPLIED TRUE CACHE INTERNAL "")
+endif()
+
 if(TENSORFLOW_SOURCE_DIR STREQUAL "")
   include(FetchContent)
   # DOWNLOAD_EXTRACT_TIMESTAMP arrived in CMake 3.24; older versions read it as

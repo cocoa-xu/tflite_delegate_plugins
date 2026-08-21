@@ -15,6 +15,16 @@
 # checked the result.
 
 function(_tflite_patch_verified_for patch_name)
+  # TFLITE_VER names the release this build downloads. A caller who supplied
+  # their own TENSORFLOW_SOURCE_DIR can leave it at the default while pointing
+  # at any version at all, so it says nothing about the tree being patched and
+  # the check has to say so rather than pass quietly.
+  if(TFLITE_SOURCE_WAS_SUPPLIED)
+    message(WARNING
+      "${patch_name} is being applied to a TensorFlow tree this build did not "
+      "fetch, so its version is unknown. It was verified against ${ARGN}.")
+    return()
+  endif()
   list(FIND ARGN "${TFLITE_VER}" _found)
   if(_found EQUAL -1)
     message(WARNING
