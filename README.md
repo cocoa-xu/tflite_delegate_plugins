@@ -61,39 +61,57 @@ ok = tflite_beam_interpreter_builder:build(Builder, Interpreter).
 Options are passed as a map and forwarded to the plugin:
 
 ```erlang
-%% Metal
 tflite_beam_delegate:external(MetalPath, #{allow_precision_loss => true,
                                            wait_type => passive}).
-%% OpenCL
-tflite_beam_delegate:external(OpenCLPath, #{is_precision_loss_allowed => true}).
 ```
 
-| plugin | options |
-|---|---|
-| Metal | `allow_precision_loss`, `enable_quantization`, `wait_type` (`passive` / `active` / `do_not_wait` / `aggressive`) |
-| OpenCL | **do not pass any** (see below) |
+### Metal
 
-**The OpenCL plugin's option parsing is broken upstream.** Every branch of
-`ParseOptions` (`delegates/gpu/delegate.cc`) is written
+- `allow_precision_loss`: `true` or `false`
+- `enable_quantization`: `true` or `false`
+- `wait_type`: `passive`, `active`, `do_not_wait`, or `aggressive`
+
+An unknown key is refused rather than ignored.
+
+### Core ML
+
+- `enabled_devices`: `neural_engine` or `all`
+- `coreml_version`: `2` or `3`
+- `max_delegated_partitions`: integer
+- `min_nodes_per_partition`: integer
+
+### OpenCL
+
+- `is_precision_loss_allowed`: `0` or `1`
+- `inference_preference`: integer
+- `inference_priority1`, `inference_priority2`, `inference_priority3`: integer
+- `experimental_flags`: integer
+- `max_delegated_partitions`: integer
+- `serialization_dir`: path
+- `model_token`: string
+
+**These work here and do not work upstream.** Every branch of `ParseOptions` in
+`delegates/gpu/delegate.cc` is written
 
 ```c
 if (strcmp(options_keys[i], "is_precision_loss_allowed")) {
 ```
 
-and `strcmp` returns **0** on a match, so each test fires on *mismatch*. Every
-value lands in the wrong field, silently. Measured against the built plugin:
+and `strcmp` returns 0 on a match, so each test fires on *mismatch*: an invented
+option name is accepted and stored in the first field, while a real one is
+applied to the next field along. Silently, with no error anywhere. All nine
+branches are written that way.
 
-| passed | result |
-|---|---|
-| `is_precision_loss_allowed` = `1` | accepted, and stored as `inference_preference` |
-| `is_precision_loss_allowed` = `not_a_number` | refused |
-| `definitely_not_an_option` = `1` | **accepted**, stored as `is_precision_loss_allowed` |
-| `definitely_not_an_option` = `not_a_number` | refused |
+This build corrects them, so an invented name is refused and a real one reaches
+the field it names. Measured against the plugin before and after the fix:
 
-An invented option name is accepted; a real one is applied to the next field
-along. Until upstream fixes it, create the OpenCL delegate with no options at
-all. The defaults are what you want anyway. The Metal adaptor is ours, parses
-its three keys correctly, and refuses an unknown key instead of guessing.
+| passed | upstream | here |
+|---|---|---|
+| `is_precision_loss_allowed` = `1` | accepted, stored as `inference_preference` | accepted, stored correctly |
+| `definitely_not_an_option` = `1` | **accepted** | **refused** |
+
+The correction lives in `cmake/UpstreamPatches.cmake` and fails the build loudly
+if upstream ever moves the code it matches.
 
 ## What to expect from it
 
