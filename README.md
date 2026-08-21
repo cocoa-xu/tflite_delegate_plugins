@@ -103,15 +103,21 @@ $ ./scripts/verify_plugin.sh build/libtensorflowlite_metal_delegate-v2.21.0.dyli
 The TensorFlow sources are downloaded to match `TFLITE_VER` (default 2.21.0).
 Point `-D TENSORFLOW_SOURCE_DIR=<path>` at an existing tree to skip that.
 
-Cross-compiling for aarch64 Linux:
+Building for another architecture is best done natively — CI uses GitHub's
+arm64 runners, and an arm64 Linux container on an Apple Silicon host does the
+same job in about two minutes, against hours on the board itself.
+
+A cross build works too, but TFLite needs a **host** `flatc` for it and aborts
+without one:
 
 ```console
-$ cmake -S . -B build -D CMAKE_TOOLCHAIN_FILE=cmake/aarch64-linux-gnu.cmake
+$ cmake -S . -B build \
+    -D CMAKE_TOOLCHAIN_FILE=cmake/aarch64-linux-gnu.cmake \
+    -D TFLITE_HOST_TOOLS_DIR=<dir containing a host flatc>
 ```
 
-An arm64 Linux container on an Apple Silicon host builds these natively in about
-two minutes, which is what CI does and what the Docker route is for; building on
-the target board itself takes hours.
+That `flatc` must match the flatbuffers version TensorFlow bundles (v25.9.23 for
+TFLite 2.21.0), which is why building natively is the shorter path.
 
 ## Two upstream defects this build works around
 

@@ -8,6 +8,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   TFLITE_VER: "2.21.0"
 
@@ -55,25 +59,26 @@ jobs:
           path: "*.tar.gz"
 
   linux:
-    runs-on: ubuntu-latest
+    # Native on both arches: GitHub's arm64 runners removed the need to
+    # cross-compile, and a cross build would need a host flatc that TFLite
+    # demands through TFLITE_HOST_TOOLS_DIR. The ubuntu:20.04 container keeps
+    # glibc at 2.31 so the artifacts run on older targets than the runner.
+    runs-on: ${{ matrix.runs_on }}
     container: ubuntu:20.04
     name: ${{ matrix.triple }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { arch: x86_64, triple: x86_64-linux-gnu, toolchain: "" }
-          - { arch: aarch64, triple: aarch64-linux-gnu, toolchain: cmake/aarch64-linux-gnu.cmake }
+          - { arch: x86_64, triple: x86_64-linux-gnu, runs_on: ubuntu-latest }
+          - { arch: aarch64, triple: aarch64-linux-gnu, runs_on: ubuntu-24.04-arm }
 
     steps:
       - name: Install system dependencies
         run: |
           export DEBIAN_FRONTEND=noninteractive
           apt-get update -qq
-          apt-get install -y -qq build-essential curl git unzip ca-certificates python3 ninja-build
-          if [ "${{ matrix.arch }}" = "aarch64" ]; then
-            apt-get install -y -qq gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
-          fi
+          apt-get install -y -qq build-essential curl git unzip ca-certificates python3 ninja-build binutils
           curl -fsSL "https://github.com/Kitware/CMake/releases/download/v3.28.6/cmake-3.28.6-linux-$(uname -m).tar.gz" -o /tmp/cmake.tar.gz
           tar -xzf /tmp/cmake.tar.gz --strip-components=1 -C /usr/local
 
@@ -83,26 +88,20 @@ jobs:
         uses: actions/cache@v6
         with:
           path: build/_deps/tensorflow-src
-          key: tf-src-${{ env.TFLITE_VER }}
+          key: tf-src-${{ env.TFLITE_VER }}-${{ matrix.arch }}
 
       - name: Build
         run: |
-          EXTRA=""
-          if [ -n "${{ matrix.toolchain }}" ]; then
-            EXTRA="-D CMAKE_TOOLCHAIN_FILE=${{ matrix.toolchain }}"
-          fi
-          cmake -S . -B build -G Ninja -D CMAKE_BUILD_TYPE=Release -D TFLITE_VER="${TFLITE_VER}" $EXTRA
+          cmake -S . -B build -G Ninja -D CMAKE_BUILD_TYPE=Release -D TFLITE_VER="${TFLITE_VER}"
           cmake --build build -j$(nproc)
 
       - name: Verify
         run: |
-          export OBJDUMP=$([ "${{ matrix.arch }}" = "aarch64" ] && echo aarch64-linux-gnu-objdump || echo objdump)
-          for lib in build/lib*.so; do ./scripts/verify_plugin.sh "$lib"; done
-          # Cross-built artifacts cannot run on the builder.
-          if [ "${{ matrix.arch }}" = "x86_64" ]; then
-            cc -o build/load_plugin test/load_plugin.c -ldl
-            for lib in build/lib*.so; do ./build/load_plugin "$lib"; done
-          fi
+          cc -o build/load_plugin test/load_plugin.c -ldl
+          for lib in build/lib*.so; do
+            ./scripts/verify_plugin.sh "$lib"
+            ./build/load_plugin "$lib"
+          done
 
       - name: Package
         run: |
