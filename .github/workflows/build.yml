@@ -35,9 +35,35 @@ jobs:
           path: build/_deps/tensorflow-src
           key: tf-src-${{ env.TFLITE_VER }}
 
+      - name: Install ccache
+        run: brew install ccache
+
+      - name: Restore ccache
+        id: ccache
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-${{ matrix.triple }}-${{ env.TFLITE_VER }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-${{ matrix.triple }}-${{ env.TFLITE_VER }}-${{ hashFiles('CMakeLists.txt') }}-
+            ccache-${{ matrix.triple }}-${{ env.TFLITE_VER }}-
+            ccache-${{ matrix.triple }}-
+
+      - name: Configure ccache
+        run: |
+          # Through the environment rather than --set-config, which writes a file
+          # under whichever directory ccache resolves at the time and that the
+          # build then never reads. The path is explicit rather than ~/.cache:
+          # the Linux jobs run inside a container where HOME is not the runner's,
+          # and a cache step aimed at the wrong directory saves an empty one while
+          # reporting nothing wrong.
+          echo "CCACHE_DIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
+          echo "CCACHE_MAXSIZE=400M" >> $GITHUB_ENV
+          ccache --zero-stats
+
       - name: Build
         run: |
-          cmake -S . -B build -D CMAKE_BUILD_TYPE=Release -D TFLITE_VER="${TFLITE_VER}"
+          cmake -S . -B build -D CMAKE_BUILD_TYPE=Release -D TFLITE_VER="${TFLITE_VER}" -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build build -j$(sysctl -n hw.ncpu)
 
       - name: Verify
@@ -45,7 +71,10 @@ jobs:
           cc -o build/load_plugin test/load_plugin.c
           for lib in build/lib*.dylib; do
             ./scripts/verify_plugin.sh "$lib"
-            ./build/load_plugin "$lib"
+            case "$lib" in
+              *metal*) ./build/load_plugin "$lib" --reject-unknown-options ;;
+              *)       ./build/load_plugin "$lib" ;;
+            esac
           done
 
       - name: Package
@@ -57,6 +86,33 @@ jobs:
         with:
           name: ${{ matrix.triple }}
           path: "*.tar.gz"
+
+      - name: ccache statistics
+        if: always()
+        run: |
+          ccache --show-stats --verbose | head -20
+          # A restored cache with no hits means the path or the key is wrong, and
+          # the only symptom is a job quietly as slow as a cold one.
+          # cache-matched-key, not cache-hit: the key carries the run id, so it
+          # never matches exactly and cache-hit is false on every run.
+          if [ -n "${{ steps.ccache.outputs.cache-matched-key }}" ]; then
+            # ccache 4 prints "Hits:", ccache 3 -- which is what ubuntu:20.04
+            # carries -- prints "cache hit (direct)" and "(preprocessed)".
+            # Reading only the former counts every ccache 3 run as zero hits and
+            # fails a job whose cache was working fine.
+            stats=$(ccache --show-stats)
+            hits=$(printf '%s' "$stats" | awk '/^  Hits:/{print $2; exit}')
+            if [ -z "$hits" ]; then
+              direct=$(printf '%s' "$stats" | awk '/^cache hit \(direct\)/{print $NF; exit}')
+              prep=$(printf '%s' "$stats" | awk '/^cache hit \(preprocessed\)/{print $NF; exit}')
+              hits=$(( ${direct:-0} + ${prep:-0} ))
+            fi
+            if [ "${hits:-0}" -eq 0 ]; then
+              echo "::error::a ccache cache was restored but nothing hit -- check CCACHE_DIR against the cached path"
+              exit 1
+            fi
+          fi
+
 
   linux:
     # Native on both arches: GitHub's arm64 runners removed the need to
@@ -78,7 +134,7 @@ jobs:
         run: |
           export DEBIAN_FRONTEND=noninteractive
           apt-get update -qq
-          apt-get install -y -qq build-essential curl git unzip ca-certificates python3 ninja-build binutils
+          apt-get install -y -qq build-essential curl git unzip ca-certificates python3 ninja-build binutils ccache
           curl -fsSL "https://github.com/Kitware/CMake/releases/download/v3.28.6/cmake-3.28.6-linux-$(uname -m).tar.gz" -o /tmp/cmake.tar.gz
           tar -xzf /tmp/cmake.tar.gz --strip-components=1 -C /usr/local
 
@@ -90,9 +146,32 @@ jobs:
           path: build/_deps/tensorflow-src
           key: tf-src-${{ env.TFLITE_VER }}-${{ matrix.arch }}
 
+      - name: Restore ccache
+        id: ccache
+        uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-${{ matrix.triple }}-${{ env.TFLITE_VER }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-${{ matrix.triple }}-${{ env.TFLITE_VER }}-${{ hashFiles('CMakeLists.txt') }}-
+            ccache-${{ matrix.triple }}-${{ env.TFLITE_VER }}-
+            ccache-${{ matrix.triple }}-
+
+      - name: Configure ccache
+        run: |
+          # Through the environment rather than --set-config, which writes a file
+          # under whichever directory ccache resolves at the time and that the
+          # build then never reads. The path is explicit rather than ~/.cache:
+          # the Linux jobs run inside a container where HOME is not the runner's,
+          # and a cache step aimed at the wrong directory saves an empty one while
+          # reporting nothing wrong.
+          echo "CCACHE_DIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
+          echo "CCACHE_MAXSIZE=400M" >> $GITHUB_ENV
+          ccache --zero-stats
+
       - name: Build
         run: |
-          cmake -S . -B build -G Ninja -D CMAKE_BUILD_TYPE=Release -D TFLITE_VER="${TFLITE_VER}"
+          cmake -S . -B build -G Ninja -D CMAKE_BUILD_TYPE=Release -D TFLITE_VER="${TFLITE_VER}" -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build build -j$(nproc)
 
       - name: Verify
@@ -112,6 +191,33 @@ jobs:
         with:
           name: ${{ matrix.triple }}
           path: "*.tar.gz"
+
+      - name: ccache statistics
+        if: always()
+        run: |
+          ccache --show-stats --verbose | head -20
+          # A restored cache with no hits means the path or the key is wrong, and
+          # the only symptom is a job quietly as slow as a cold one.
+          # cache-matched-key, not cache-hit: the key carries the run id, so it
+          # never matches exactly and cache-hit is false on every run.
+          if [ -n "${{ steps.ccache.outputs.cache-matched-key }}" ]; then
+            # ccache 4 prints "Hits:", ccache 3 -- which is what ubuntu:20.04
+            # carries -- prints "cache hit (direct)" and "(preprocessed)".
+            # Reading only the former counts every ccache 3 run as zero hits and
+            # fails a job whose cache was working fine.
+            stats=$(ccache --show-stats)
+            hits=$(printf '%s' "$stats" | awk '/^  Hits:/{print $2; exit}')
+            if [ -z "$hits" ]; then
+              direct=$(printf '%s' "$stats" | awk '/^cache hit \(direct\)/{print $NF; exit}')
+              prep=$(printf '%s' "$stats" | awk '/^cache hit \(preprocessed\)/{print $NF; exit}')
+              hits=$(( ${direct:-0} + ${prep:-0} ))
+            fi
+            if [ "${hits:-0}" -eq 0 ]; then
+              echo "::error::a ccache cache was restored but nothing hit -- check CCACHE_DIR against the cached path"
+              exit 1
+            fi
+          fi
+
 
   release:
     needs: [macos, linux]
