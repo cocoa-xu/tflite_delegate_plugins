@@ -1,0 +1,138 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  TFLITE_VER: "2.21.0"
+
+jobs:
+  macos:
+    runs-on: ${{ matrix.runs_on }}
+    name: ${{ matrix.triple }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runs_on: macos-14, triple: aarch64-apple-darwin }
+          - { runs_on: macos-15-intel, triple: x86_64-apple-darwin }
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Cache TensorFlow sources
+        uses: actions/cache@v6
+        with:
+          path: build/_deps/tensorflow-src
+          key: tf-src-${{ env.TFLITE_VER }}
+
+      - name: Build
+        run: |
+          cmake -S . -B build -D CMAKE_BUILD_TYPE=Release -D TFLITE_VER="${TFLITE_VER}"
+          cmake --build build -j$(sysctl -n hw.ncpu)
+
+      - name: Verify
+        run: |
+          cc -o build/load_plugin test/load_plugin.c
+          for lib in build/lib*.dylib; do
+            ./scripts/verify_plugin.sh "$lib"
+            ./build/load_plugin "$lib"
+          done
+
+      - name: Package
+        run: |
+          mkdir -p dist/lib && cp build/lib*.dylib dist/lib/
+          tar -C dist -czf "tflite-delegate-plugins-${{ matrix.triple }}-v${TFLITE_VER}.tar.gz" lib
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.triple }}
+          path: "*.tar.gz"
+
+  linux:
+    runs-on: ubuntu-latest
+    container: ubuntu:20.04
+    name: ${{ matrix.triple }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, triple: x86_64-linux-gnu, toolchain: "" }
+          - { arch: aarch64, triple: aarch64-linux-gnu, toolchain: cmake/aarch64-linux-gnu.cmake }
+
+    steps:
+      - name: Install system dependencies
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y -qq build-essential curl git unzip ca-certificates python3 ninja-build
+          if [ "${{ matrix.arch }}" = "aarch64" ]; then
+            apt-get install -y -qq gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
+          fi
+          curl -fsSL "https://github.com/Kitware/CMake/releases/download/v3.22.6/cmake-3.22.6-linux-$(uname -m).tar.gz" -o /tmp/cmake.tar.gz
+          tar -xzf /tmp/cmake.tar.gz --strip-components=1 -C /usr/local
+
+      - uses: actions/checkout@v7
+
+      - name: Cache TensorFlow sources
+        uses: actions/cache@v6
+        with:
+          path: build/_deps/tensorflow-src
+          key: tf-src-${{ env.TFLITE_VER }}
+
+      - name: Build
+        run: |
+          EXTRA=""
+          if [ -n "${{ matrix.toolchain }}" ]; then
+            EXTRA="-D CMAKE_TOOLCHAIN_FILE=${{ matrix.toolchain }}"
+          fi
+          cmake -S . -B build -G Ninja -D CMAKE_BUILD_TYPE=Release -D TFLITE_VER="${TFLITE_VER}" $EXTRA
+          cmake --build build -j$(nproc)
+
+      - name: Verify
+        run: |
+          export OBJDUMP=$([ "${{ matrix.arch }}" = "aarch64" ] && echo aarch64-linux-gnu-objdump || echo objdump)
+          for lib in build/lib*.so; do ./scripts/verify_plugin.sh "$lib"; done
+          # Cross-built artifacts cannot run on the builder.
+          if [ "${{ matrix.arch }}" = "x86_64" ]; then
+            cc -o build/load_plugin test/load_plugin.c -ldl
+            for lib in build/lib*.so; do ./build/load_plugin "$lib"; done
+          fi
+
+      - name: Package
+        run: |
+          mkdir -p dist/lib && cp build/lib*.so dist/lib/
+          tar -C dist -czf "tflite-delegate-plugins-${{ matrix.triple }}-v${TFLITE_VER}.tar.gz" lib
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.triple }}
+          path: "*.tar.gz"
+
+  release:
+    needs: [macos, linux]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        run: |
+          cd dist && sha256sum *.tar.gz | tee checksum.txt
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/checksum.txt

@@ -1,0 +1,6 @@
+build/
+_build/
+dist/
+*.so
+*.dylib
+checksum.txt
