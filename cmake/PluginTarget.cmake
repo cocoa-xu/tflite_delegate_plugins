@@ -4,10 +4,12 @@
 #   [FRAMEWORKS <names...>]      Apple frameworks
 # )
 #
-# Produces a shared library named <target>-v<TFLITE_VER> exporting exactly the
-# two external-delegate entry points and nothing else. The version is in the
-# filename because upstream provides no binary-stable delegate interface: a
-# plugin is valid only against the runtime release it was built from.
+# Produces a shared library named lib<target> exporting exactly the two
+# external-delegate entry points and nothing else.
+#
+# The TFLite version is not in the filename: the tarball carries it, and the
+# check that matters happens at runtime against tflite_beam:tflite_version/0.
+# Putting it here only made every path referencing a plugin break on upgrade.
 function(tflite_plugin_add_library target)
   cmake_parse_arguments(ARG "" "" "SOURCES;FRAMEWORKS;LIBS" ${ARGN})
   if(NOT ARG_SOURCES)
@@ -17,7 +19,6 @@ function(tflite_plugin_add_library target)
   add_library(${target} SHARED ${ARG_SOURCES})
 
   set_target_properties(${target} PROPERTIES
-    OUTPUT_NAME "${target}-v${TFLITE_VER}"
     CXX_VISIBILITY_PRESET hidden
     VISIBILITY_INLINES_HIDDEN ON
   )

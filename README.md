@@ -1,4 +1,4 @@
-# tflite-delegate-plugins
+# tflite_delegate_plugins
 
 Prebuilt TensorFlow Lite delegate plugins: shared libraries exporting the
 `tflite_plugin_create_delegate` / `tflite_plugin_destroy_delegate` ABI, loadable
@@ -13,9 +13,9 @@ BEAM-specific: the same `.so` works with `benchmark_model
 
 | plugin | backend | platforms | built by default |
 |---|---|---|---|
-| `libtensorflowlite_opencl_delegate-v<VER>` | OpenCL | macOS, Linux | yes |
-| `libtensorflowlite_metal_delegate-v<VER>` | Metal | macOS | yes |
-| `libtensorflowlite_coreml_delegate-v<VER>` | Core ML | macOS | **no** ([why](docs/coreml.md)) |
+| `libtflite_opencl_delegate` | OpenCL | macOS, Linux | yes |
+| `libtflite_metal_delegate` | Metal | macOS | yes |
+| `libtflite_coreml_delegate` | Core ML | macOS | **no** ([why](docs/coreml.md)) |
 
 The Core ML plugin is complete and correct and delegates zero nodes from any
 current model, because upstream's delegate accepts only operator version 1 and
@@ -42,8 +42,8 @@ undefined behaviour, not a clean error.
 Every tarball on a release ships its own checksum file alongside it:
 
 ```console
-$ sha256sum -c tflite-delegate-plugins-aarch64-linux-gnu-v2.21.0.tar.gz.sha256
-tflite-delegate-plugins-aarch64-linux-gnu-v2.21.0.tar.gz: OK
+$ sha256sum -c tflite_delegate_plugins-aarch64-linux-gnu.tar.gz.sha256
+tflite_delegate_plugins-aarch64-linux-gnu.tar.gz: OK
 ```
 
 Check it before loading. A plugin is `dlopen`ed into your process, so an
@@ -53,7 +53,7 @@ unverified one is a security problem rather than a hygiene one.
 
 ```erlang
 {ok, Delegate} = tflite_beam_delegate:external(
-    "/path/to/libtensorflowlite_metal_delegate-v2.21.0.dylib"),
+    "/path/to/libtflite_metal_delegate.dylib"),
 ok = tflite_beam_interpreter_builder:add_delegate(Builder, Delegate),
 ok = tflite_beam_interpreter_builder:build(Builder, Interpreter).
 ```
@@ -163,7 +163,7 @@ Adding a plugin is adding a directory under `plugins/` and one line in
 ```console
 $ cmake -S . -B build -D CMAKE_BUILD_TYPE=Release
 $ cmake --build build -j
-$ ./scripts/verify_plugin.sh build/libtensorflowlite_metal_delegate-v2.21.0.dylib
+$ ./scripts/verify_plugin.sh build/libtflite_metal_delegate.dylib
 ```
 
 The TensorFlow sources are downloaded to match `TFLITE_VER` (default 2.21.0).

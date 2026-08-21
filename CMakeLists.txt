@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 project(tflite_delegate_plugins
   VERSION 0.1.0
   DESCRIPTION "TensorFlow Lite delegate plugins for the external-delegate ABI"
-  HOMEPAGE_URL "https://github.com/cocoa-xu/tflite-delegate-plugins"
+  HOMEPAGE_URL "https://github.com/cocoa-xu/tflite_delegate_plugins"
   LANGUAGES CXX
 )
 
@@ -21,7 +21,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+  # RelWithDebInfo rather than Release: the release workflow separates the debug
+  # info into its own artifact and strips the plugin, which is only worth doing
+  # if there is debug info to separate.
+  set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Build type" FORCE)
 endif()
 
 # Every plugin lands in one directory regardless of which subdirectory declares
@@ -33,6 +36,7 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 include(TFLiteSource)     # locate or download TFLite, then add it
 include(UpstreamFixups)   # defects in TFLite's own build, worked around here
+include(UpstreamPatches)  # corrections to TFLite's own sources
 include(PluginTarget)     # tflite_plugin_add_library()
 
 add_subdirectory(plugins)

@@ -51,47 +51,12 @@ set_target_properties(coreml_mlmodel_proto PROPERTIES POSITION_INDEPENDENT_CODE 
 # ships a static one, so the Core ML sources are listed here instead. The two
 # test files are excluded.
 set(COREML_SRC_DIR "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/delegates/coreml")
-# coreml_delegate.mm is patched rather than used as-is: see the comment on
-# COREML_ANE_PATCH_FROM below. The patched copy lives in the build tree so the
-# TFLite sources, which are fetched and cached, are never modified.
-set(COREML_PATCHED_DIR "${CMAKE_CURRENT_BINARY_DIR}/patched")
-file(MAKE_DIRECTORY "${COREML_PATCHED_DIR}")
-
-# IsNeuralEngineAvailable() decides only whether Create refuses; it takes no
-# part in any computation. It identifies the Neural Engine by matching
-# uname().machine against "iPad"/"iPhone" prefixes, so it returns false on every
-# Mac, including Apple silicon, where a Neural Engine is always present and
-# uname reports "arm64". The result is that the delegate's own default option,
-# DevicesWithNeuralEngine, can never produce a delegate on macOS.
-# Bracket arguments so the newlines are real newlines rather than backslash-n.
-set(COREML_ANE_PATCH_FROM [==[    return major_version >= 11;
-  }
-  return false;
-}]==])
-set(COREML_ANE_PATCH_TO [==[    return major_version >= 11;
-  }
-#if TARGET_OS_OSX
-  // Patched by tflite-delegate-plugins: every Apple silicon Mac has a Neural
-  // Engine, and uname reports "arm64" there, matching neither prefix above.
-  if (strncmp("arm64", system_info.machine, 5) == 0) return true;
-#endif
-  return false;
-}]==])
-
-file(READ "${COREML_SRC_DIR}/coreml_delegate.mm" _coreml_delegate_src)
-string(FIND "${_coreml_delegate_src}" "${COREML_ANE_PATCH_FROM}" _found)
-if(_found EQUAL -1)
-  message(FATAL_ERROR
-    "Could not apply the Neural Engine patch to coreml_delegate.mm: the code it "
-    "matches has changed upstream. Re-check IsNeuralEngineAvailable() in "
-    "TFLite ${TFLITE_VER} before updating COREML_ANE_PATCH_FROM.")
-endif()
-string(REPLACE "${COREML_ANE_PATCH_FROM}" "${COREML_ANE_PATCH_TO}"
-       _coreml_delegate_src "${_coreml_delegate_src}")
-file(WRITE "${COREML_PATCHED_DIR}/coreml_delegate.mm" "${_coreml_delegate_src}")
+# coreml_delegate.mm needs its Neural Engine detection corrected; see
+# tflite_patch_coreml_neural_engine in cmake/UpstreamPatches.cmake.
+tflite_patch_coreml_neural_engine(COREML_DELEGATE_PATCHED)
 
 set(COREML_DELEGATE_SOURCES
-  "${COREML_PATCHED_DIR}/coreml_delegate.mm"
+  "${COREML_DELEGATE_PATCHED}"
   "${COREML_SRC_DIR}/coreml_delegate_kernel.mm"
   "${COREML_SRC_DIR}/coreml_executor.mm"
 )
@@ -112,9 +77,9 @@ target_link_libraries(coreml_delegate PUBLIC
 )
 set_target_properties(coreml_delegate PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-tflite_plugin_add_library(tensorflowlite_coreml_delegate
+tflite_plugin_add_library(tflite_coreml_delegate
   SOURCES plugin_adaptor.mm
   LIBS coreml_delegate
   FRAMEWORKS CoreML Foundation CoreFoundation
 )
-target_include_directories(tensorflowlite_coreml_delegate PRIVATE "${COREML_PROTO_OUT}")
+target_include_directories(tflite_coreml_delegate PRIVATE "${COREML_PROTO_OUT}")

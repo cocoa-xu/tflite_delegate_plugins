@@ -63,7 +63,7 @@ jobs:
 
       - name: Build
         run: |
-          cmake -S . -B build -D CMAKE_BUILD_TYPE=Release -D TFLITE_VER="${TFLITE_VER}" -D TFLITE_PLUGINS_COREML=OFF -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake -S . -B build -D CMAKE_BUILD_TYPE=RelWithDebInfo -D TFLITE_VER="${TFLITE_VER}" -D TFLITE_PLUGINS_COREML=OFF -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build build -j$(sysctl -n hw.ncpu)
 
       - name: Verify
@@ -79,10 +79,23 @@ jobs:
 
       - name: Package
         run: |
-          mkdir -p dist/lib && cp build/lib/*.dylib dist/lib/
-          PKG="tflite-delegate-plugins-${{ matrix.triple }}-v${TFLITE_VER}.tar.gz"
+          mkdir -p dist/lib debug
+          cp build/lib/*.dylib dist/lib/
+          # Debug info lives outside the binary on Mach-O: dsymutil collects it
+          # into a bundle, then the .dylib is stripped of everything but the two
+          # exported entry points.
+          for lib in dist/lib/*.dylib; do
+            dsymutil "$lib" -o "debug/$(basename "$lib").dSYM"
+            strip -x "$lib"
+          done
+          ls -l dist/lib debug
+
+          PKG="tflite_delegate_plugins-${{ matrix.triple }}.tar.gz"
+          DBG="tflite_delegate_plugins-${{ matrix.triple }}-debug.tar.gz"
           tar -C dist -czf "$PKG" lib
+          tar -C debug -czf "$DBG" .
           shasum -a 256 "$PKG" | tee "$PKG.sha256"
+          shasum -a 256 "$DBG" | tee "$DBG.sha256"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -175,7 +188,7 @@ jobs:
 
       - name: Build
         run: |
-          cmake -S . -B build -G Ninja -D CMAKE_BUILD_TYPE=Release -D TFLITE_VER="${TFLITE_VER}" -D TFLITE_PLUGINS_COREML=OFF -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake -S . -B build -G Ninja -D CMAKE_BUILD_TYPE=RelWithDebInfo -D TFLITE_VER="${TFLITE_VER}" -D TFLITE_PLUGINS_COREML=OFF -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build build -j$(nproc)
 
       - name: Verify
@@ -188,10 +201,24 @@ jobs:
 
       - name: Package
         run: |
-          mkdir -p dist/lib && cp build/lib/*.so dist/lib/
-          PKG="tflite-delegate-plugins-${{ matrix.triple }}-v${TFLITE_VER}.tar.gz"
+          mkdir -p dist/lib debug
+          cp build/lib/*.so dist/lib/
+          # Split the debug info out, strip the .so, and leave a debuglink so a
+          # debugger can find the separated file by name later.
+          for lib in dist/lib/*.so; do
+            base=$(basename "$lib")
+            objcopy --only-keep-debug "$lib" "debug/$base.debug"
+            strip --strip-debug --strip-unneeded "$lib"
+            objcopy --add-gnu-debuglink="debug/$base.debug" "$lib"
+          done
+          ls -l dist/lib debug
+
+          PKG="tflite_delegate_plugins-${{ matrix.triple }}.tar.gz"
+          DBG="tflite_delegate_plugins-${{ matrix.triple }}-debug.tar.gz"
           tar -C dist -czf "$PKG" lib
+          tar -C debug -czf "$DBG" .
           sha256sum "$PKG" | tee "$PKG.sha256"
+          sha256sum "$DBG" | tee "$DBG.sha256"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -247,10 +274,15 @@ jobs:
           # needs: gates on job success, not on a job having produced anything.
           # A release missing a target is silent otherwise.
           expected=4
-          found=$(ls -1 *.tar.gz 2>/dev/null | wc -l)
+          found=$(ls -1 *.tar.gz 2>/dev/null | grep -vc -- '-debug\.tar\.gz$' || true)
+          debug=$(ls -1 *-debug.tar.gz 2>/dev/null | wc -l)
+          if [ "$debug" -ne "$expected" ]; then
+            echo "::error::expected $expected debug bundles, found $debug"
+            exit 1
+          fi
           sums=$(ls -1 *.tar.gz.sha256 2>/dev/null | wc -l)
-          if [ "$sums" -ne "$found" ]; then
-            echo "::error::$found tarballs but $sums checksum files"
+          if [ "$sums" -ne "$((found + debug))" ]; then
+            echo "::error::$((found + debug)) tarballs but $sums checksum files"
             exit 1
           fi
           if [ "$found" -ne "$expected" ]; then
@@ -281,10 +313,14 @@ jobs:
             tflite_beam:tflite_version().  %% must be <<"${{ env.TFLITE_VER }}">>
             ```
 
+            Debug symbols are published separately as
+            `*-debug.tar.gz`, so the plugins themselves stay stripped. Download a
+            debug bundle only when you need a readable stack.
+
             Each tarball ships its own `.sha256`; check it before loading:
 
             ```console
-            $ sha256sum -c tflite-delegate-plugins-<target>-v${{ env.TFLITE_VER }}.tar.gz.sha256
+            $ sha256sum -c tflite_delegate_plugins-<target>.tar.gz.sha256
             ```
 
             **Do not pass options to the OpenCL plugin.** Upstream's option

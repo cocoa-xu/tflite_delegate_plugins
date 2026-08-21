@@ -51,4 +51,11 @@ set(TFLITE_GENERATED_INCLUDE_DIRS
   "${CMAKE_BINARY_DIR}/tflite/flatbuffers/include"
   "${CMAKE_BINARY_DIR}/tflite/abseil-cpp"
   "${CMAKE_BINARY_DIR}/fp16_headers/include"
+  # The GPU sources include these by bare name (<CL/cl.h>, <EGL/egl.h> and so
+  # on). TFLite fetches them but carries the paths only on its own targets, and
+  # opengl/egl put theirs under api/ rather than include/.
+  "${CMAKE_BINARY_DIR}/opencl_headers"
+  "${CMAKE_BINARY_DIR}/vulkan_headers/include"
+  "${CMAKE_BINARY_DIR}/opengl_headers/api"
+  "${CMAKE_BINARY_DIR}/egl_headers/api"
 )
