@@ -50,10 +50,10 @@ function(tflite_patch_opencl_parse_options out_var)
          "strcmp(\\1) == 0)" _text "${_text}")
 
   # The entry points are marked TFL_CAPI_EXPORT, which expands to nothing when
-  # TFL_STATIC_LIBRARY_BUILD is defined -- correct for objects destined for an
-  # archive, wrong here, where -fvisibility=hidden then strips the only two
-  # symbols this plugin exists to export. Marking them directly does not depend
-  # on the order CMake happens to put -D and -U in.
+  # TFL_STATIC_LIBRARY_BUILD is defined. That is right for objects headed into
+  # an archive and wrong here, where -fvisibility=hidden then strips the only
+  # two symbols this plugin exists to export. Marking them directly does not
+  # depend on the order CMake happens to put -D and -U in.
   string(REPLACE "TfLiteDelegate* tflite_plugin_create_delegate("
          "__attribute__((visibility(\"default\"))) TfLiteDelegate* tflite_plugin_create_delegate("
          _text "${_text}")
