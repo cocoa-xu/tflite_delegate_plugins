@@ -1,6 +1,6 @@
 // Opens a plugin the way TFLite's external delegate loader does and exercises
 // both entry points. Passing means the ABI is right and, on a machine without a
-// usable GPU, that being refused is survivable -- which is the case that takes a
+// usable GPU, that being refused is survivable. That is the case that takes a
 // host process down when a plugin gets it wrong.
 #include <dlfcn.h>
 #include <stddef.h>
@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
     TfLiteDelegate *delegate = create(NULL, NULL, 0, on_error);
     if (delegate == NULL) {
         // A refusal is a valid outcome: no device, no driver, unusable options.
-        printf("  create declined (no usable device here) -- survived\n");
+        printf("  create declined (no usable device here), survived\n");
     } else {
         printf("  create returned a delegate\n");
         destroy(delegate);

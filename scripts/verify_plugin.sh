@@ -39,7 +39,7 @@ fi
 
 # OpenCL and Metal are reached through dlopen and the framework loader, so a
 # link-time dependency on either means the plugin will not load on a machine
-# that lacks it -- exactly the machines it has to fail gracefully on.
+# that lacks it, which are exactly the machines it has to fail gracefully on.
 if [ -n "$bad_deps" ]; then
   note "deps" "unexpected runtime dependencies:"
   echo "$bad_deps" | sed 's/^/             /'

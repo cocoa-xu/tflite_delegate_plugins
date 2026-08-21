@@ -2,9 +2,9 @@
 
 Measured 2026-08-21 on two boards. The short version: **the plugin works and is
 worth using on an RK3588 with a recent kernel, and cannot be used on a Raspberry
-Pi 5 today** — for reasons that have nothing to do with the plugin itself.
+Pi 5 today**, for reasons that have nothing to do with the plugin itself.
 
-## Raspberry Pi 5 — no OpenCL to talk to
+## Raspberry Pi 5: no OpenCL to talk to
 
 Stock Raspberry Pi OS (bookworm, kernel 6.6): no `libOpenCL`, no
 `/etc/OpenCL/vendors`, no `clinfo`. Installing the distro's `mesa-opencl-icd`
@@ -18,7 +18,7 @@ Number of devices     0
 
 `/usr/lib/aarch64-linux-gnu/gallium-pipe/` ships no `pipe_v3d.so`, so Clover has
 no pipe driver for this GPU. The modern answer is rusticl, and **this Mesa build
-does not contain it** — `libRusticlOpenCL.so` is absent from both the Raspberry
+does not contain it**. `libRusticlOpenCL.so` is absent from both the Raspberry
 Pi and the Debian backports packages.
 
 That is not an oversight. Building rusticl needs meson ≥ 1.1, LLVM ≥ 15, Rust ≥
@@ -39,7 +39,7 @@ ERROR: Restored original execution plan after delegate application failure.
 The interpreter keeps its graph and the caller gets an error. Revisit when
 Raspberry Pi OS moves to trixie, where the packaging problem disappears.
 
-## FriendlyELEC CM3588 (RK3588, Mali-G610) — 2.25x and correct
+## FriendlyELEC CM3588 (RK3588, Mali-G610): 2.25x and correct
 
 This one works, and the plugin needed no changes at all. **Three prerequisites,
 all of them necessary:**
@@ -52,7 +52,7 @@ all of them necessary:**
    default outside a short opt-in list (asahi, freedreno, radeonsi); without
    this variable there are no devices no matter what else is installed.
 3. **`mesa-opencl-icd` and `ocl-icd-opencl-dev`.** The second supplies
-   `libOpenCL.so` — distros ship only `libOpenCL.so.1`, and TFLite dlopens the
+   `libOpenCL.so`. Distros ship only `libOpenCL.so.1`, and TFLite dlopens the
    unversioned name.
 
 With those in place:
@@ -79,12 +79,12 @@ signature as on macOS.
 ## For contrast: the RK3588 NPU is not usable through TFLite today
 
 The board also has a 6 TOPS NPU, reachable in principle through Mesa's Teflon
-delegate — which exports our exact plugin ABI, so `external/1` loads it with no
+delegate, which exports our exact plugin ABI, so `external/1` loads it with no
 code on our side. With kernel 6.18.45 the `rocket` driver comes up properly
 (`/dev/accel/accel0`, all three NPU cores). But:
 
 - a float32 model (`scale == 0`) is accepted and **segfaults the process**;
-- a quantised model returns wrong results — 2.76x faster, top-5 entirely
+- a quantised model returns wrong results: 2.76x faster, top-5 entirely
   different, output distribution flattened (peak 176 → 32).
 
 The rocket driver is reverse-engineered and this is a normal place for that to

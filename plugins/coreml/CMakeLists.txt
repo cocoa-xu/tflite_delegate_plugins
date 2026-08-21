@@ -47,8 +47,8 @@ target_link_libraries(coreml_mlmodel_proto PUBLIC protobuf::libprotobuf)
 target_include_directories(coreml_mlmodel_proto PUBLIC "${COREML_PROTO_OUT}")
 set_target_properties(coreml_mlmodel_proto PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-# TFLite's Core ML delegate has no CMake target upstream at all -- unlike Metal,
-# which at least ships a static one -- so its sources are listed here. The two
+# TFLite's Core ML delegate has no CMake target upstream at all. Metal at least
+# ships a static one, so the Core ML sources are listed here instead. The two
 # test files are excluded.
 set(COREML_SRC_DIR "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/delegates/coreml")
 # coreml_delegate.mm is patched rather than used as-is: see the comment on
@@ -60,7 +60,7 @@ file(MAKE_DIRECTORY "${COREML_PATCHED_DIR}")
 # IsNeuralEngineAvailable() decides only whether Create refuses; it takes no
 # part in any computation. It identifies the Neural Engine by matching
 # uname().machine against "iPad"/"iPhone" prefixes, so it returns false on every
-# Mac -- including Apple silicon, where a Neural Engine is always present and
+# Mac, including Apple silicon, where a Neural Engine is always present and
 # uname reports "arm64". The result is that the delegate's own default option,
 # DevicesWithNeuralEngine, can never produce a delegate on macOS.
 # Bracket arguments so the newlines are real newlines rather than backslash-n.

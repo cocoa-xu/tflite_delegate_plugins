@@ -11,7 +11,7 @@ endif()
 
 # The GPU sources reference absl logging but the tensorflow-lite target links
 # none of it. A static archive never resolves symbols, so the gap is invisible
-# until something builds a .so -- which is exactly what this project does.
+# until something builds a .so, which is exactly what this project does.
 set(TFLITE_PLUGIN_ABSL_DEPS
   absl::log_internal_message
   absl::log_internal_check_op

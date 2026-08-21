@@ -1,5 +1,5 @@
 // TFLite's OpenCL GPU delegate defines both plugin entry points itself
-// (delegates/gpu/delegate.cc), so this library needs no adaptor -- only a
+// (delegates/gpu/delegate.cc), so this library needs no adaptor, only a
 // reference that makes the linker pull that object out of the static archive.
 #include "tensorflow/lite/delegates/gpu/delegate.h"
 

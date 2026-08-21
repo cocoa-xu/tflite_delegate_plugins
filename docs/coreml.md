@@ -13,8 +13,8 @@ M4 Max, macOS 24.6.0, TFLite 2.21.0, through
 
 | model | nodes delegated | vs XNNPACK |
 |---|---|---|
-| `add.bin` (2 ops, float32) | **2 / 2** | — |
-| `multi_add.bin` (3 ops, float32) | **3 / 3** | — |
+| `add.bin` (2 ops, float32) | **2 / 2** | n/a |
+| `multi_add.bin` (3 ops, float32) | **3 / 3** | n/a |
 | `mobilenet_v2_1.0_224_inat_bird_quant` | **0 / 65** | 1.03x |
 | `lite-model_efficientdet_lite4` (float32) | **0 / 483** | 0.45x |
 
@@ -52,7 +52,7 @@ Three independent details date this delegate to the same period:
 
 - the operator-version ceiling above;
 - `IsNeuralEngineAvailable()`, which recognises devices up to `iPhone11,x` and
-  `iPad8,x` — hardware from 2018-2019;
+  `iPad8,x`, which is 2018-2019 hardware;
 - the float32-only restriction, which excludes every quantised model.
 
 It is not experimental in the sense of being early. It has been left alone.
@@ -62,7 +62,7 @@ It is not experimental in the sense of being early. It has been left alone.
 `cmake/`'s build patches `IsNeuralEngineAvailable()` so that Apple silicon Macs
 are recognised. Upstream identifies the Neural Engine by matching
 `uname().machine` against `"iPad"` and `"iPhone"` prefixes and returns false for
-everything else — including every Mac, all of which report `arm64` and, since
+everything else, including every Mac: all of them report `arm64` and, since
 M1, all of which have a Neural Engine. Without the patch the delegate's own
 default option, `DevicesWithNeuralEngine`, can never produce a delegate on
 macOS at all.

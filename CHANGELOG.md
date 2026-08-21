@@ -41,5 +41,5 @@ from the same TFLite release.
 
 ### Fixed
 
-Four defects in TensorFlow Lite's own build and runtime, worked around here and
-documented in [`docs/upstream-defects.md`](docs/upstream-defects.md).
+Several defects in TensorFlow Lite's own build are worked around in
+`cmake/UpstreamFixups.cmake`, which explains each one at the point it is applied.

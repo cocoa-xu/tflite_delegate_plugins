@@ -96,8 +96,8 @@ jobs:
           # cache-matched-key, not cache-hit: the key carries the run id, so it
           # never matches exactly and cache-hit is false on every run.
           if [ -n "${{ steps.ccache.outputs.cache-matched-key }}" ]; then
-            # ccache 4 prints "Hits:", ccache 3 -- which is what ubuntu:20.04
-            # carries -- prints "cache hit (direct)" and "(preprocessed)".
+            # ccache 4 prints "Hits:". ccache 3, which is what ubuntu:20.04
+            # carries, prints "cache hit (direct)" and "(preprocessed)".
             # Reading only the former counts every ccache 3 run as zero hits and
             # fails a job whose cache was working fine.
             stats=$(ccache --show-stats)
@@ -108,7 +108,7 @@ jobs:
               hits=$(( ${direct:-0} + ${prep:-0} ))
             fi
             if [ "${hits:-0}" -eq 0 ]; then
-              echo "::error::a ccache cache was restored but nothing hit -- check CCACHE_DIR against the cached path"
+              echo "::error::a ccache cache was restored but nothing hit; check CCACHE_DIR against the cached path"
               exit 1
             fi
           fi
@@ -201,8 +201,8 @@ jobs:
           # cache-matched-key, not cache-hit: the key carries the run id, so it
           # never matches exactly and cache-hit is false on every run.
           if [ -n "${{ steps.ccache.outputs.cache-matched-key }}" ]; then
-            # ccache 4 prints "Hits:", ccache 3 -- which is what ubuntu:20.04
-            # carries -- prints "cache hit (direct)" and "(preprocessed)".
+            # ccache 4 prints "Hits:". ccache 3, which is what ubuntu:20.04
+            # carries, prints "cache hit (direct)" and "(preprocessed)".
             # Reading only the former counts every ccache 3 run as zero hits and
             # fails a job whose cache was working fine.
             stats=$(ccache --show-stats)
@@ -213,7 +213,7 @@ jobs:
               hits=$(( ${direct:-0} + ${prep:-0} ))
             fi
             if [ "${hits:-0}" -eq 0 ]; then
-              echo "::error::a ccache cache was restored but nothing hit -- check CCACHE_DIR against the cached path"
+              echo "::error::a ccache cache was restored but nothing hit; check CCACHE_DIR against the cached path"
               exit 1
             fi
           fi
@@ -244,9 +244,9 @@ jobs:
           body: |
             Built against **TensorFlow Lite ${{ env.TFLITE_VER }}**.
 
-            A plugin only works with a host built from the same TFLite release —
-            upstream provides no binary-stable delegate interface, and a mismatch
-            is undefined behaviour rather than a clean error. Check the host with:
+            A plugin only works with a host built from the same TFLite release.
+            Upstream provides no binary-stable delegate interface, and a
+            mismatch is undefined behaviour rather than a clean error. Check the host with:
 
             ```erlang
             tflite_beam:tflite_version().  %% must be <<"${{ env.TFLITE_VER }}">>
