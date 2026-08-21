@@ -63,7 +63,7 @@ jobs:
 
       - name: Build
         run: |
-          cmake -S . -B build -D CMAKE_BUILD_TYPE=Release -D TFLITE_VER="${TFLITE_VER}" -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake -S . -B build -D CMAKE_BUILD_TYPE=Release -D TFLITE_VER="${TFLITE_VER}" -D TFLITE_PLUGINS_COREML=OFF -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build build -j$(sysctl -n hw.ncpu)
 
       - name: Verify
@@ -171,7 +171,7 @@ jobs:
 
       - name: Build
         run: |
-          cmake -S . -B build -G Ninja -D CMAKE_BUILD_TYPE=Release -D TFLITE_VER="${TFLITE_VER}" -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake -S . -B build -G Ninja -D CMAKE_BUILD_TYPE=Release -D TFLITE_VER="${TFLITE_VER}" -D TFLITE_PLUGINS_COREML=OFF -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build build -j$(nproc)
 
       - name: Verify

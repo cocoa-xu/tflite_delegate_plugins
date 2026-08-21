@@ -38,8 +38,17 @@ add_subdirectory(
   EXCLUDE_FROM_ALL
 )
 
+# TFLite ships find-modules for its own dependencies (protobuf among them);
+# consumers need them on the module path to reuse the same versions.
+list(APPEND CMAKE_MODULE_PATH "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/tools/cmake/modules")
+set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" PARENT_SCOPE)
+
+# Where TFLite's own build leaves the headers its sources include by bare name.
+# fp16 is fetched by the GPU path and included as "fp16.h" from the Core ML
+# sources, which have no CMake target upstream to carry the path for them.
 set(TFLITE_GENERATED_INCLUDE_DIRS
   "${TENSORFLOW_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}/tflite/flatbuffers/include"
   "${CMAKE_BINARY_DIR}/tflite/abseil-cpp"
+  "${CMAKE_BINARY_DIR}/fp16_headers/include"
 )

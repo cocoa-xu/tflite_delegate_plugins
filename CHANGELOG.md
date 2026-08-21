@@ -17,6 +17,13 @@ from the same TFLite release.
 - Metal delegate plugin for macOS. TFLite's Metal delegate exports no plugin
   ABI, so `plugins/metal/plugin_adaptor.mm` supplies one; it must be
   Objective-C++ because `metal_delegate.h` imports `Metal/Metal.h`.
+- Core ML delegate plugin for macOS, **off by default**. It builds, loads and
+  computes correctly, but upstream's delegate accepts only operator version 1
+  and only float32, so it delegates no nodes from any current model. The build
+  generates 33 coremltools protobuf definitions and compiles 22 Objective-C++
+  sources that upstream provides no CMake target for, and patches
+  `IsNeuralEngineAvailable()` so Apple silicon is recognised. See
+  [`docs/coreml.md`](docs/coreml.md).
 - `scripts/verify_plugin.sh`, run in CI on every target: fails the build unless
   exactly the two plugin entry points are exported and nothing but system
   libraries is linked.

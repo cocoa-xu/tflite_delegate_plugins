@@ -5,3 +5,4 @@ dist/
 *.dylib
 checksum.txt
 .ccache/
+build-*/

@@ -11,10 +11,16 @@ BEAM-specific: the same `.so` works with `benchmark_model
 
 ## What is built
 
-| plugin | backend | platforms |
-|---|---|---|
-| `libtensorflowlite_gpu_delegate-v<VER>` | OpenCL | macOS, Linux |
-| `libtensorflowlite_metal_delegate-v<VER>` | Metal | macOS only |
+| plugin | backend | platforms | built by default |
+|---|---|---|---|
+| `libtensorflowlite_gpu_delegate-v<VER>` | OpenCL | macOS, Linux | yes |
+| `libtensorflowlite_metal_delegate-v<VER>` | Metal | macOS | yes |
+| `libtensorflowlite_coreml_delegate-v<VER>` | Core ML | macOS | **no** — [why](docs/coreml.md) |
+
+The Core ML plugin is complete and correct and delegates zero nodes from any
+current model, because upstream's delegate accepts only operator version 1 and
+only float32. On macOS use Metal: same hardware, 9x. The full measurement is in
+[`docs/coreml.md`](docs/coreml.md).
 
 ## Version locking is not optional
 

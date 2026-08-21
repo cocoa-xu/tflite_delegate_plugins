@@ -12,6 +12,9 @@ set(TENSORFLOW_SOURCE_DIR "" CACHE PATH "Existing TensorFlow source tree; downlo
 
 option(TFLITE_PLUGINS_OPENCL "Build the OpenCL GPU delegate plugin" ON)
 option(TFLITE_PLUGINS_METAL "Build the Metal delegate plugin (Apple only)" ON)
+# Off by default: it builds and runs correctly but delegates no nodes from any
+# current model. See docs/coreml.md before turning it on.
+option(TFLITE_PLUGINS_COREML "Build the Core ML delegate plugin (Apple only, see docs/coreml.md)" OFF)
 option(TFLITE_PLUGINS_INSTALL "Generate install rules" ON)
 
 set(CMAKE_CXX_STANDARD 17)
