@@ -1,0 +1,86 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+env:
+  TFLITE_VER: "2.21.0"
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Check the set is complete
+        run: |
+          cd dist
+          ls -l
+          # needs: gates on job success, not on a job having produced anything.
+          # A release missing a target is silent otherwise.
+          expected=4
+          found=$(ls -1 *.tar.gz 2>/dev/null | grep -vc -- '-debug\.tar\.gz$' || true)
+          debug=$(ls -1 *-debug.tar.gz 2>/dev/null | wc -l)
+          if [ "$debug" -ne "$expected" ]; then
+            echo "::error::expected $expected debug bundles, found $debug"
+            exit 1
+          fi
+          sums=$(ls -1 *.tar.gz.sha256 2>/dev/null | wc -l)
+          if [ "$sums" -ne "$((found + debug))" ]; then
+            echo "::error::$((found + debug)) tarballs but $sums checksum files"
+            exit 1
+          fi
+          if [ "$found" -ne "$expected" ]; then
+            echo "::error::expected $expected tarballs, found $found"
+            exit 1
+          fi
+          for t in aarch64-apple-darwin x86_64-apple-darwin x86_64-linux-gnu aarch64-linux-gnu; do
+            ls *"$t"*.tar.gz > /dev/null 2>&1 || { echo "::error::no tarball for $t"; exit 1; }
+          done
+          # TFLITE_VER reaches this job through workflow-level env; an empty one
+          # would put "Built against TensorFlow Lite" with no version in the notes.
+          test -n "${TFLITE_VER}" || { echo "::error::TFLITE_VER is empty"; exit 1; }
+          echo "complete: $found tarballs for TFLite ${TFLITE_VER}"
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.tar.gz.sha256
+          body: |
+            Built against **TensorFlow Lite ${{ env.TFLITE_VER }}**.
+
+            A plugin only works with a host built from the same TFLite release.
+            Upstream provides no binary-stable delegate interface, and a
+            mismatch is undefined behaviour rather than a clean error. Check the host with:
+
+            ```erlang
+            tflite_beam:tflite_version().  %% must be <<"${{ env.TFLITE_VER }}">>
+            ```
+
+            Debug symbols are published separately as
+            `*-debug.tar.gz`, so the plugins themselves stay stripped. Download a
+            debug bundle only when you need a readable stack.
+
+            Each tarball ships its own `.sha256`; check it before loading:
+
+            ```console
+            $ sha256sum -c tflite_delegate_plugins-<target>.tar.gz.sha256
+            ```
+
+            The OpenCL plugin takes options here that it ignores upstream:
+            its option parser tests every key with a bare `strcmp` and so acts
+            on mismatches, which we patch at build time. See the README for what
+            each plugin accepts.

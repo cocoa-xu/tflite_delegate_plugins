@@ -7,8 +7,9 @@
 # Produces a shared library named lib<target> exporting exactly the two
 # external-delegate entry points and nothing else.
 #
-# The TFLite version is not in the filename: the tarball carries it, and the
-# check that matters happens at runtime against tflite_beam:tflite_version/0.
+# The TFLite version is not in the filename. The release it ships in names it,
+# and the check that matters happens at runtime against
+# tflite_beam:tflite_version/0.
 # Putting it here only made every path referencing a plugin break on upgrade.
 function(tflite_plugin_add_library target)
   cmake_parse_arguments(ARG "" "" "SOURCES;FRAMEWORKS;LIBS" ${ARGN})

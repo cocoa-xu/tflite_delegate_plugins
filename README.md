@@ -28,14 +28,17 @@ Open-source TFLite provides **no binary-stable delegate interface**. Upstream's
 own words: a dynamically loaded delegate *"must have been built against the same
 version (and commit) that the TF Lite runtime itself has been built at"*.
 
-That is why the TFLite version is in every filename. A plugin marked `v2.21.0`
-is for a host built against TFLite 2.21.0 and nothing else. Check before you
-load it.
+The version a plugin was built against is the release it came from, and the
+host can be asked directly:
 
-There is a gap here worth knowing about: **tflite_beam does not currently expose
-the TFLite version it was built against**, so the match has to be made against
-its release notes rather than queried at runtime. Loading a mismatched plugin is
-undefined behaviour, not a clean error.
+```erlang
+1> tflite_beam:tflite_version().
+<<"2.21.0">>
+```
+
+Take the plugins from the release whose notes name that same version. A
+mismatch is undefined behaviour rather than a clean error, so nothing will tell
+you at load time that you got it wrong.
 
 ## Verifying a download
 
