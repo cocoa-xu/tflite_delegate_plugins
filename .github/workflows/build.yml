@@ -69,7 +69,7 @@ jobs:
       - name: Verify
         run: |
           cc -o build/load_plugin test/load_plugin.c
-          for lib in build/lib*.dylib; do
+          for lib in build/lib/*.dylib; do
             ./scripts/verify_plugin.sh "$lib"
             case "$lib" in
               *metal*) ./build/load_plugin "$lib" --reject-unknown-options ;;
@@ -79,7 +79,7 @@ jobs:
 
       - name: Package
         run: |
-          mkdir -p dist/lib && cp build/lib*.dylib dist/lib/
+          mkdir -p dist/lib && cp build/lib/*.dylib dist/lib/
           tar -C dist -czf "tflite-delegate-plugins-${{ matrix.triple }}-v${TFLITE_VER}.tar.gz" lib
 
       - uses: actions/upload-artifact@v7
@@ -177,14 +177,14 @@ jobs:
       - name: Verify
         run: |
           cc -o build/load_plugin test/load_plugin.c -ldl
-          for lib in build/lib*.so; do
+          for lib in build/lib/*.so; do
             ./scripts/verify_plugin.sh "$lib"
             ./build/load_plugin "$lib"
           done
 
       - name: Package
         run: |
-          mkdir -p dist/lib && cp build/lib*.so dist/lib/
+          mkdir -p dist/lib && cp build/lib/*.so dist/lib/
           tar -C dist -czf "tflite-delegate-plugins-${{ matrix.triple }}-v${TFLITE_VER}.tar.gz" lib
 
       - uses: actions/upload-artifact@v7
@@ -241,3 +241,20 @@ jobs:
           files: |
             dist/*.tar.gz
             dist/checksum.txt
+          body: |
+            Built against **TensorFlow Lite ${{ env.TFLITE_VER }}**.
+
+            A plugin only works with a host built from the same TFLite release —
+            upstream provides no binary-stable delegate interface, and a mismatch
+            is undefined behaviour rather than a clean error. Check the host with:
+
+            ```erlang
+            tflite_beam:tflite_version().  %% must be <<"${{ env.TFLITE_VER }}">>
+            ```
+
+            Verify a download against `checksum.txt` before loading it.
+
+            **Do not pass options to the OpenCL plugin.** Upstream's option
+            parser tests every key with a bare `strcmp`, which is true on
+            mismatch, so each value lands in the wrong field silently. The Metal
+            plugin's adaptor is ours and parses its options correctly.

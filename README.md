@@ -121,6 +121,21 @@ ERROR: Restored original execution plan after delegate application failure.
 The interpreter keeps its original graph and the caller gets an error. There is
 no GL fallback: CMake builds define `-DCL_DELEGATE_NO_GL`.
 
+## Layout
+
+```
+plugins/<name>/     one directory per plugin: its adaptor and its CMakeLists
+cmake/              TFLiteSource, UpstreamFixups, PluginTarget, toolchains/
+linker/             export lists -- .lds for Apple, version script elsewhere
+third_party/        vendored sources, with their licences
+test/               load_plugin.c, run against every built plugin in CI
+scripts/            verify_plugin.sh, the CI gate on the export surface
+docs/               upstream-defects.md
+```
+
+Adding a plugin is adding a directory under `plugins/` and one line in
+`plugins/CMakeLists.txt`.
+
 ## Building
 
 ```console
@@ -141,30 +156,25 @@ without one:
 
 ```console
 $ cmake -S . -B build \
-    -D CMAKE_TOOLCHAIN_FILE=cmake/aarch64-linux-gnu.cmake \
+    -D CMAKE_TOOLCHAIN_FILE=cmake/toolchains/aarch64-linux-gnu.cmake \
     -D TFLITE_HOST_TOOLS_DIR=<dir containing a host flatc>
 ```
 
 That `flatc` must match the flatbuffers version TensorFlow bundles (v25.9.23 for
 TFLite 2.21.0), which is why building natively is the shorter path.
 
-## Two upstream defects this build works around
+## Upstream defects
 
-Neither is ours, and both exist because no upstream CMake target builds a shared
-object out of the GPU sources:
+Building a shared object out of TFLite's delegate sources with CMake is a
+combination nothing upstream exercises, and it turns up defects. Four so far,
+including one that produces no error at all and silently misapplies every option
+you pass the OpenCL plugin.
 
-- **`GPU=ON` is missing its abseil-log link dependency.** The GPU sources use
-  `absl::log_internal::LogMessage`, but the `tensorflow-lite` target links none
-  of it. A static archive never resolves symbols, so it only breaks when
-  something links a `.so`. `TFLITE_PLUGIN_ABSL_DEPS` in `CMakeLists.txt` supplies
-  the missing targets.
-- **The Metal flatc command declares no dependency on flatc.** The
-  `add_custom_command` generating `inference_context_generated.h`
-  (`tensorflow/lite/CMakeLists.txt:453` in 2.21.0) has no `DEPENDS`, unlike the
-  XNNPACK schema command thirty lines below it, so parallel builds race and fail
-  with `flatc: No such file or directory`. We add the edge back.
+They are catalogued with symptoms, causes and workarounds in
+[`docs/upstream-defects.md`](docs/upstream-defects.md). Read the third one before
+passing options to anything.
 
 ## License
 
-Apache-2.0, matching TensorFlow. `src/metal_plugin_adaptor.mm` is shaped after
+Apache-2.0, matching TensorFlow. `plugins/metal/plugin_adaptor.mm` is shaped after
 `tensorflow/lite/delegates/utils/dummy_delegate/external_delegate_adaptor.cc`.
