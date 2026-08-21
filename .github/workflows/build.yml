@@ -80,12 +80,16 @@ jobs:
       - name: Package
         run: |
           mkdir -p dist/lib && cp build/lib/*.dylib dist/lib/
-          tar -C dist -czf "tflite-delegate-plugins-${{ matrix.triple }}-v${TFLITE_VER}.tar.gz" lib
+          PKG="tflite-delegate-plugins-${{ matrix.triple }}-v${TFLITE_VER}.tar.gz"
+          tar -C dist -czf "$PKG" lib
+          shasum -a 256 "$PKG" | tee "$PKG.sha256"
 
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.triple }}
-          path: "*.tar.gz"
+          path: |
+            *.tar.gz
+            *.tar.gz.sha256
 
       - name: ccache statistics
         if: always()
@@ -185,12 +189,16 @@ jobs:
       - name: Package
         run: |
           mkdir -p dist/lib && cp build/lib/*.so dist/lib/
-          tar -C dist -czf "tflite-delegate-plugins-${{ matrix.triple }}-v${TFLITE_VER}.tar.gz" lib
+          PKG="tflite-delegate-plugins-${{ matrix.triple }}-v${TFLITE_VER}.tar.gz"
+          tar -C dist -czf "$PKG" lib
+          sha256sum "$PKG" | tee "$PKG.sha256"
 
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.triple }}
-          path: "*.tar.gz"
+          path: |
+            *.tar.gz
+            *.tar.gz.sha256
 
       - name: ccache statistics
         if: always()
@@ -240,6 +248,11 @@ jobs:
           # A release missing a target is silent otherwise.
           expected=4
           found=$(ls -1 *.tar.gz 2>/dev/null | wc -l)
+          sums=$(ls -1 *.tar.gz.sha256 2>/dev/null | wc -l)
+          if [ "$sums" -ne "$found" ]; then
+            echo "::error::$found tarballs but $sums checksum files"
+            exit 1
+          fi
           if [ "$found" -ne "$expected" ]; then
             echo "::error::expected $expected tarballs, found $found"
             exit 1
@@ -252,15 +265,11 @@ jobs:
           test -n "${TFLITE_VER}" || { echo "::error::TFLITE_VER is empty"; exit 1; }
           echo "complete: $found tarballs for TFLite ${TFLITE_VER}"
 
-      - name: Checksums
-        run: |
-          cd dist && sha256sum *.tar.gz | tee checksum.txt
-
       - uses: softprops/action-gh-release@v3
         with:
           files: |
             dist/*.tar.gz
-            dist/checksum.txt
+            dist/*.tar.gz.sha256
           body: |
             Built against **TensorFlow Lite ${{ env.TFLITE_VER }}**.
 
@@ -272,7 +281,11 @@ jobs:
             tflite_beam:tflite_version().  %% must be <<"${{ env.TFLITE_VER }}">>
             ```
 
-            Verify a download against `checksum.txt` before loading it.
+            Each tarball ships its own `.sha256`; check it before loading:
+
+            ```console
+            $ sha256sum -c tflite-delegate-plugins-<target>-v${{ env.TFLITE_VER }}.tar.gz.sha256
+            ```
 
             **Do not pass options to the OpenCL plugin.** Upstream's option
             parser tests every key with a bare `strcmp`, which is true on

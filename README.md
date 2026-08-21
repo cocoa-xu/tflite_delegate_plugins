@@ -13,7 +13,7 @@ BEAM-specific: the same `.so` works with `benchmark_model
 
 | plugin | backend | platforms | built by default |
 |---|---|---|---|
-| `libtensorflowlite_gpu_delegate-v<VER>` | OpenCL | macOS, Linux | yes |
+| `libtensorflowlite_opencl_delegate-v<VER>` | OpenCL | macOS, Linux | yes |
 | `libtensorflowlite_metal_delegate-v<VER>` | Metal | macOS | yes |
 | `libtensorflowlite_coreml_delegate-v<VER>` | Core ML | macOS | **no** ([why](docs/coreml.md)) |
 
@@ -36,6 +36,18 @@ There is a gap here worth knowing about: **tflite_beam does not currently expose
 the TFLite version it was built against**, so the match has to be made against
 its release notes rather than queried at runtime. Loading a mismatched plugin is
 undefined behaviour, not a clean error.
+
+## Verifying a download
+
+Every tarball on a release ships its own checksum file alongside it:
+
+```console
+$ sha256sum -c tflite-delegate-plugins-aarch64-linux-gnu-v2.21.0.tar.gz.sha256
+tflite-delegate-plugins-aarch64-linux-gnu-v2.21.0.tar.gz: OK
+```
+
+Check it before loading. A plugin is `dlopen`ed into your process, so an
+unverified one is a security problem rather than a hygiene one.
 
 ## Using one
 
