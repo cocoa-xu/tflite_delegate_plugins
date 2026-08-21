@@ -39,6 +39,12 @@ int main(int argc, char **argv) {
     }
     printf("  both entry points resolved\n");
 
+    // The ABI requires this to be a no-op. Upstream's GPU delegates both read
+    // delegate->data_ without checking, so this is the line that catches a
+    // plugin built without the guard.
+    destroy(NULL);
+    printf("  destroy(NULL) is a no-op\n");
+
     TfLiteDelegate *delegate = create(NULL, NULL, 0, on_error);
     if (delegate == NULL) {
         // A refusal is a valid outcome: no device, no driver, unusable options.
@@ -49,9 +55,10 @@ int main(int argc, char **argv) {
         printf("  destroy ok\n");
     }
 
-    // Upstream's own ParseOptions tests every key with a bare strcmp, which is
-    // true on mismatch, so the OpenCL plugin accepts invented option names and
-    // files their values under the wrong field. Adaptors we write must not.
+    // No plugin here may accept an option it does not know. Upstream's OpenCL
+    // parser did exactly that, testing every key with a bare strcmp and so
+    // acting on the mismatches; this is the check that the patch correcting it
+    // actually reached the binary.
     if (strict) {
         const char *keys[] = {"definitely_not_an_option"};
         const char *values[] = {"1"};

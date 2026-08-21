@@ -64,10 +64,7 @@ jobs:
           cc -o build/load_plugin test/load_plugin.c
           for lib in build/lib/*.dylib; do
             ./scripts/verify_plugin.sh "$lib"
-            case "$lib" in
-              *metal*) ./build/load_plugin "$lib" --reject-unknown-options ;;
-              *)       ./build/load_plugin "$lib" ;;
-            esac
+            ./build/load_plugin "$lib" --reject-unknown-options
           done
 
       - name: Package
@@ -189,7 +186,7 @@ jobs:
           cc -o build/load_plugin test/load_plugin.c -ldl
           for lib in build/lib/*.so; do
             ./scripts/verify_plugin.sh "$lib"
-            ./build/load_plugin "$lib"
+            ./build/load_plugin "$lib" --reject-unknown-options
           done
 
       - name: Package

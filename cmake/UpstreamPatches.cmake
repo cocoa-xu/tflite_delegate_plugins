@@ -38,27 +38,63 @@ function(tflite_patch_opencl_parse_options out_var)
   file(MAKE_DIRECTORY "${_out}")
 
   file(READ "${_src}" _text)
+  # ParseOptions has nine option branches and every one of them is inverted.
+  # Counting rather than checking for at least one, because a partial match is
+  # the dangerous outcome: the branches that still read inverted swallow the
+  # key belonging to the branch after them, so a valid option makes the plugin
+  # refuse to create.
+  set(_expected_tests 9)
   string(REGEX MATCHALL "strcmp\\(options_keys\\[i\\], \"[a-z0-9_]+\"\\)\\)" _hits "${_text}")
   list(LENGTH _hits _count)
-  if(_count EQUAL 0)
+  if(NOT _count EQUAL _expected_tests)
     message(FATAL_ERROR
-      "opencl_parse_options found no inverted strcmp tests in ParseOptions. "
-      "Either TFLite ${TFLITE_VER} fixed them, in which case delete this patch, "
-      "or the code moved and it needs rewriting.")
+      "opencl_parse_options expected ${_expected_tests} inverted strcmp tests in "
+      "ParseOptions and found ${_count}. Either TFLite ${TFLITE_VER} fixed some or "
+      "all of them, in which case rewrite or delete this patch, or the code moved. "
+      "Patching a subset is worse than patching none.")
   endif()
   string(REGEX REPLACE "strcmp\\((options_keys\\[i\\], \"[a-z0-9_]+\")\\)\\)"
          "strcmp(\\1) == 0)" _text "${_text}")
+  string(REGEX MATCHALL "strcmp\\(options_keys\\[i\\], \"[a-z0-9_]+\"\\)\\)" _left "${_text}")
+  list(LENGTH _left _remaining)
+  if(NOT _remaining EQUAL 0)
+    message(FATAL_ERROR
+      "opencl_parse_options left ${_remaining} inverted tests behind. The match "
+      "pattern and the replace pattern have drifted apart.")
+  endif()
 
   # The entry points are marked TFL_CAPI_EXPORT, which expands to nothing when
   # TFL_STATIC_LIBRARY_BUILD is defined. That is right for objects headed into
   # an archive and wrong here, where -fvisibility=hidden then strips the only
   # two symbols this plugin exists to export. Marking them directly does not
   # depend on the order CMake happens to put -D and -U in.
-  string(REPLACE "TfLiteDelegate* tflite_plugin_create_delegate("
-         "__attribute__((visibility(\"default\"))) TfLiteDelegate* tflite_plugin_create_delegate("
-         _text "${_text}")
-  string(REPLACE "void tflite_plugin_destroy_delegate(TfLiteDelegate* delegate)"
-         "__attribute__((visibility(\"default\"))) void tflite_plugin_destroy_delegate(TfLiteDelegate* delegate)"
+  # Silence here is the worst outcome in the file: the plugin still builds, the
+  # message below still says it was patched, and the .so exports nothing at all,
+  # so dlsym hands the host a null and it dies calling it.
+  foreach(_decl
+      "TfLiteDelegate* tflite_plugin_create_delegate("
+      "void tflite_plugin_destroy_delegate(TfLiteDelegate* delegate)")
+    string(FIND "${_text}" "${_decl}" _at)
+    if(_at EQUAL -1)
+      message(FATAL_ERROR
+        "opencl_parse_options could not find \"${_decl}\" to mark visible. "
+        "Without it -fvisibility=hidden strips the entry points and the plugin "
+        "exports nothing.")
+    endif()
+    string(REPLACE "${_decl}" "__attribute__((visibility(\"default\"))) ${_decl}"
+           _text "${_text}")
+  endforeach()
+
+  # Upstream dereferences delegate->data_ without checking, but the external
+  # delegate ABI says destroying a null delegate is allowed and does nothing.
+  # A host that pairs create and destroy unconditionally, which is what a
+  # resource destructor does, takes the process down on a declined create.
+  set(_destroy "__attribute__((visibility(\"default\"))) void tflite_plugin_destroy_delegate(TfLiteDelegate* delegate) {")
+  string(FIND "${_text}" "${_destroy}" _at)
+  if(_at EQUAL -1)
+    message(FATAL_ERROR "opencl_parse_options could not find the destroy body to guard.")
+  endif()
+  string(REPLACE "${_destroy}" "${_destroy}\n  if (delegate == nullptr) return;"
          _text "${_text}")
 
   file(WRITE "${_out}/delegate.cc" "${_text}")

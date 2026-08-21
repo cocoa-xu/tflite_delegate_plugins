@@ -82,6 +82,10 @@ TFL_EXTERNAL_DELEGATE_EXPORT TfLiteDelegate* tflite_plugin_create_delegate(
 
 TFL_EXTERNAL_DELEGATE_EXPORT void tflite_plugin_destroy_delegate(
     TfLiteDelegate* delegate) {
+    // The ABI says destroying a null delegate does nothing. TFLGpuDelegateDelete
+    // reads delegate->data_ without checking, and create above returns null for
+    // any option it will not take, so the pair is reachable.
+    if (delegate == nullptr) return;
     TFLGpuDelegateDelete(delegate);
 }
 
