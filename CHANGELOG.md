@@ -49,5 +49,8 @@ plugin now do what they say. The correction is applied to a copy of upstream's
 source at configure time, alongside a second one that lets Core ML's Neural
 Engine check see Apple silicon; both live in `cmake/UpstreamPatches.cmake`.
 
-Several defects in TensorFlow Lite's own build are worked around separately in
-`cmake/UpstreamFixups.cmake`, which explains each one at the point it is applied.
+`cmake/UpstreamFixups.cmake` holds the rest of what this build has to smooth
+over, each explained at the point it is applied. One of them is not a defect but
+a version window: 2.21.0 was tagged five months before the change that gives
+`tensorflow-lite` its absl logging dependency, so a shared library linked
+against it needs that spelled out. It goes away when TFLITE_VER does.

@@ -93,28 +93,8 @@ An unknown key is refused rather than ignored.
 - `serialization_dir`: path
 - `model_token`: string
 
-**These work here and do not work upstream.** Every branch of `ParseOptions` in
-`delegates/gpu/delegate.cc` is written
-
-```c
-if (strcmp(options_keys[i], "is_precision_loss_allowed")) {
-```
-
-and `strcmp` returns 0 on a match, so each test fires on *mismatch*: an invented
-option name is accepted and stored in the first field, while a real one is
-applied to the next field along. Silently, with no error anywhere. All nine
-branches are written that way.
-
-This build corrects them, so an invented name is refused and a real one reaches
-the field it names. Measured against the plugin before and after the fix:
-
-| passed | upstream | here |
-|---|---|---|
-| `is_precision_loss_allowed` = `1` | accepted, stored as `inference_preference` | accepted, stored correctly |
-| `definitely_not_an_option` = `1` | **accepted** | **refused** |
-
-The correction lives in `cmake/UpstreamPatches.cmake` and fails the build loudly
-if upstream ever moves the code it matches.
+Each option reaches the field it names, and a name the plugin does not know is
+refused rather than quietly filed somewhere else.
 
 ## What to expect from it
 

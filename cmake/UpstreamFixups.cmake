@@ -17,9 +17,21 @@ elseif(NOT TARGET inference_context_cc_fbs)
     "and this fixup no longer applies.")
 endif()
 
-# The GPU sources reference absl logging but the tensorflow-lite target links
-# none of it. A static archive never resolves symbols, so the gap is invisible
-# until something builds a .so, which is exactly what this project does.
+# libtensorflow-lite.a leaves seven absl::log_internal::LogMessage symbols
+# undefined, from LOG() calls in flatbuffer_conversions.cc and elsewhere. A
+# static archive never resolves symbols, so nothing notices until something
+# links a .so, which is exactly what this project does.
+#
+# This is a version window, not a defect. TensorFlow PR #110784 added
+# absl::log to the tensorflow-lite target on 2026-08-14; v2.21.0 was tagged on
+# 2026-03-04, five months before that, so it does not have the line. Verified
+# on 2026-08-21: a shared library linked against a master build needs none of
+# what follows.
+#
+# DELETE THIS once TFLITE_VER moves to a release that contains #110784. The
+# check is one grep in the TFLite sources this build is using:
+#
+#   grep 'absl::log$' tensorflow/lite/CMakeLists.txt
 set(TFLITE_PLUGIN_ABSL_DEPS
   absl::log_internal_message
   absl::log_internal_check_op
