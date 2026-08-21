@@ -49,7 +49,8 @@ TFL_EXTERNAL_DELEGATE_EXPORT TfLiteDelegate* tflite_plugin_create_delegate(
     // IsNeuralEngineAvailable(), which otherwise reports no Neural Engine on
     // every Mac; see plugins/coreml/CMakeLists.txt.
     options.enabled_devices = TfLiteCoreMlDelegateDevicesWithNeuralEngine;
-    // Zero is rejected with "coreml_version must be 2 or 3. Setting to 3."
+    // Left at 3 because upstream does not treat 0 as a request for a default:
+    // it logs "coreml_version must be 2 or 3. Setting to 3." and overwrites it.
     options.coreml_version = 3;
 
     for (size_t i = 0; i < num_options; ++i) {

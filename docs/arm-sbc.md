@@ -41,8 +41,10 @@ Raspberry Pi OS moves to trixie, where the packaging problem disappears.
 
 ## FriendlyELEC CM3588 (RK3588, Mali-G610): 2.25x and correct
 
-This one works, and the plugin needed no changes at all. **Three prerequisites,
-all of them necessary:**
+This one works, and nothing in the plugin is specific to the board. The
+measurement below predates the option-parser patch and was taken against a
+plugin built straight from upstream's source. **Three prerequisites, all of them
+necessary:**
 
 1. **A kernel with panthor**, not panfrost. Armbian's `vendor` 6.1.115 binds the
    GPU to panfrost and rusticl finds **zero** devices on it. `current`

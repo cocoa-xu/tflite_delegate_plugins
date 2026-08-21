@@ -3,8 +3,8 @@
 
 # The custom command generating inference_context_generated.h declares no
 # DEPENDS on the flatc target (tensorflow/lite/CMakeLists.txt:453 in 2.21.0),
-# unlike the XNNPACK schema command thirty lines below it which does. Under -j
-# it races and fails with "flatc: No such file or directory".
+# unlike the XNNPACK schema command at line 545 of the same file which does.
+# Under -j it races and fails with "flatc: No such file or directory".
 if(TARGET inference_context_cc_fbs AND TARGET flatbuffers-flatc)
   add_dependencies(inference_context_cc_fbs flatbuffers-flatc)
 endif()

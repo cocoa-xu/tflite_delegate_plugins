@@ -4,10 +4,10 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [semantic versioning](https://semver.org/).
 
-Note that a plugin's *filename* carries the TensorFlow Lite version it was built
-against, which is independent of this project's version. Upstream provides no
-binary-stable delegate interface, so a plugin is only valid for a host built
-from the same TFLite release.
+Note that the TensorFlow Lite version a release was built against is
+independent of this project's version, and is named in the release notes rather
+than in any filename. Upstream provides no binary-stable delegate interface, so
+a plugin is only valid for a host built from the same TFLite release.
 
 ## [Unreleased]
 
@@ -20,7 +20,7 @@ from the same TFLite release.
 - Core ML delegate plugin for macOS, **off by default**. It builds, loads and
   computes correctly, but upstream's delegate accepts only operator version 1
   and only float32, so it delegates no nodes from any current model. The build
-  generates 33 coremltools protobuf definitions and compiles 22 Objective-C++
+  generates 33 coremltools protobuf definitions and compiles the 19 delegate
   sources that upstream provides no CMake target for, and patches
   `IsNeuralEngineAvailable()` so Apple silicon is recognised. See
   [`docs/coreml.md`](docs/coreml.md).
@@ -33,7 +33,8 @@ from the same TFLite release.
   refuses an option it does not know.
 
 - [`docs/arm-sbc.md`](docs/arm-sbc.md): measurements on two ARM boards. The
-  OpenCL plugin runs unmodified on an RK3588's Mali-G610 at **2.25x** with
+  OpenCL plugin needs nothing board-specific to reach **2.25x** on an RK3588's
+  Mali-G610, with
   output matching the CPU, given a panthor kernel and `RUSTICL_ENABLE=panthor`.
   A Raspberry Pi 5 has no OpenCL device available today, for packaging reasons
   documented there. Also records why the RK3588's NPU is not usable through
@@ -41,5 +42,12 @@ from the same TFLite release.
 
 ### Fixed
 
-Several defects in TensorFlow Lite's own build are worked around in
+TFLite's OpenCL delegate tested every option key with a bare `strcmp` and so
+acted on the mismatches instead of the matches, which meant an invented key was
+accepted and a real one landed in the next field along. Options passed to the
+plugin now do what they say. The correction is applied to a copy of upstream's
+source at configure time, alongside a second one that lets Core ML's Neural
+Engine check see Apple silicon; both live in `cmake/UpstreamPatches.cmake`.
+
+Several defects in TensorFlow Lite's own build are worked around separately in
 `cmake/UpstreamFixups.cmake`, which explains each one at the point it is applied.

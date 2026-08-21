@@ -8,7 +8,7 @@ person to wonder "what about Core ML?" should not have to spend another one.
 
 ## What was measured
 
-M4 Max, macOS 24.6.0, TFLite 2.21.0, through
+M4 Max, macOS 15.7.3, TFLite 2.21.0, through
 `tflite_beam_delegate:external/1`.
 
 | model | nodes delegated | vs XNNPACK |
@@ -51,8 +51,10 @@ because its operators are still version 1.
 Three independent details date this delegate to the same period:
 
 - the operator-version ceiling above;
-- `IsNeuralEngineAvailable()`, which recognises devices up to `iPhone11,x` and
-  `iPad8,x`, which is 2018-2019 hardware;
+- `IsNeuralEngineAvailable()`, which reads `uname().machine` and answers only
+  for names starting `iPad` or `iPhone`. A Mac reports `arm64`, matches neither,
+  and falls through to `return false`, so every Apple silicon machine is told it
+  has no Neural Engine;
 - the float32-only restriction, which excludes every quantised model.
 
 It is not experimental in the sense of being early. It has been left alone.
@@ -82,7 +84,7 @@ allowed through one at a time; a blanket relaxation could not.
 
 The build is worth more than the result. `plugins/coreml/CMakeLists.txt`
 generates 33 coremltools protobuf definitions with TFLite's own protoc, compiles
-22 Objective-C++ sources that have no CMake target upstream at all, and patches
+the 19 delegate sources that have no CMake target upstream at all, and patches
 one of them in the build tree without touching the fetched sources. If Core ML
 ever moves, or if an iOS target is added, none of that has to be worked out
 again.

@@ -137,9 +137,10 @@ the graph the delegate can claim; a model the delegate cannot partition will be
 
 ## Requirements at runtime
 
-Neither plugin links its GPU API (OpenCL is `dlopen`ed, Metal comes from the
-system framework), so both load on machines that have neither, and fail when the
-delegate is applied rather than when the library is opened.
+The OpenCL plugin `dlopen`s its driver rather than linking it, so it loads on a
+machine with no OpenCL at all and fails when the delegate is applied rather than
+when the library is opened. Metal links `Metal.framework`, which is present on
+every Mac, and fails the same way when there is no usable device.
 
 **Linux/OpenCL** needs an ICD *and* the unversioned `libOpenCL.so`. Distros
 often ship only `libOpenCL.so.1`; install `ocl-icd-opencl-dev` (Debian/Ubuntu)
@@ -167,8 +168,10 @@ its original graph and the caller gets an error, rather than a crash.
 ## Layout
 
 ```
-plugins/<name>/     one directory per plugin: its adaptor and its CMakeLists
-cmake/              TFLiteSource, UpstreamFixups, PluginTarget, toolchains/
+plugins/<name>/     one directory per plugin: a CMakeLists, and an adaptor
+                    where upstream does not export the entry points itself
+cmake/              TFLiteSource, UpstreamPatches, UpstreamFixups, PluginTarget,
+                    toolchains/
 linker/             export lists: .lds for Apple, version script elsewhere
 third_party/        vendored sources, with their licences
 test/               load_plugin.c, run against every built plugin in CI
@@ -184,7 +187,7 @@ Adding a plugin is adding a directory under `plugins/` and one line in
 ```console
 $ cmake -S . -B build -D CMAKE_BUILD_TYPE=Release
 $ cmake --build build -j
-$ ./scripts/verify_plugin.sh build/libtflite_metal_delegate.dylib
+$ ./scripts/verify_plugin.sh build/lib/libtflite_metal_delegate.dylib
 ```
 
 The TensorFlow sources are downloaded to match `TFLITE_VER` (default 2.21.0).

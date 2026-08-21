@@ -80,7 +80,8 @@ jobs:
             $ sha256sum -c tflite_delegate_plugins-<target>.tar.gz.sha256
             ```
 
-            The OpenCL plugin takes options here that it ignores upstream:
-            its option parser tests every key with a bare `strcmp` and so acts
-            on mismatches, which we patch at build time. See the README for what
-            each plugin accepts.
+            Options passed to the OpenCL plugin do what they say here, which
+            is not true of an upstream build: its parser tests every key with a
+            bare `strcmp` and so acts on the mismatches, accepting invented keys
+            and putting real ones in the wrong field. We patch it at build time.
+            See the README for what each plugin accepts.
