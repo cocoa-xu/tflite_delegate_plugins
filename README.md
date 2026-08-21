@@ -24,8 +24,12 @@ version (and commit) that the TF Lite runtime itself has been built at"*.
 
 That is why the TFLite version is in every filename. A plugin marked `v2.21.0`
 is for a host built against TFLite 2.21.0 and nothing else — check before you
-load it. `tflite_beam` reports its own version through
-`tflite_beam:tflite_version/0`.
+load it.
+
+There is a gap here worth knowing about: **tflite_beam does not currently expose
+the TFLite version it was built against**, so the match has to be made against
+its release notes rather than queried at runtime. Loading a mismatched plugin is
+undefined behaviour, not a clean error.
 
 ## Using one
 
