@@ -47,7 +47,15 @@ jobs:
             exit 1
           fi
           for t in aarch64-apple-darwin x86_64-apple-darwin x86_64-linux-gnu aarch64-linux-gnu; do
-            ls *"$t"*.tar.gz > /dev/null 2>&1 || { echo "::error::no tarball for $t"; exit 1; }
+            # Named exactly. A glob here also matches the target's debug bundle,
+            # so a target whose plugin tarball went missing still passed as long
+            # as its symbols arrived.
+            for f in "tflite_delegate_plugins-$t.tar.gz" \
+                     "tflite_delegate_plugins-$t-debug.tar.gz" \
+                     "tflite_delegate_plugins-$t.tar.gz.sha256" \
+                     "tflite_delegate_plugins-$t-debug.tar.gz.sha256"; do
+              [ -f "$f" ] || { echo "::error::missing $f"; exit 1; }
+            done
           done
           # TFLITE_VER reaches this job through workflow-level env; an empty one
           # would put "Built against TensorFlow Lite" with no version in the notes.

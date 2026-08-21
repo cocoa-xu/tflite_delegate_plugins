@@ -1,9 +1,9 @@
 name: ci
 
-# Documentation changes do not need four full TFLite builds. Tag pushes are
-# handled by release.yml, which carries no path filter, because GitHub does not
-# document whether paths-ignore applies to tags and a release that silently
-# skips its build would be much worse than a wasted run.
+# Documentation changes do not need four full TFLite builds. Tag pushes go to
+# release.yml instead, which carries no path filter at all: GitHub does not
+# evaluate path filters for tag pushes, so one there would read as a condition
+# and be silently ignored.
 on:
   push:
     branches: [main]

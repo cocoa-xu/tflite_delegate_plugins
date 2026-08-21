@@ -50,9 +50,19 @@ jobs:
           # the Linux jobs run inside a container where HOME is not the runner's,
           # and a cache step aimed at the wrong directory saves an empty one while
           # reporting nothing wrong.
-          echo "CCACHE_DIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
+          D="${{ github.workspace }}/.ccache"
+          echo "CCACHE_DIR=$D" >> $GITHUB_ENV
           echo "CCACHE_MAXSIZE=400M" >> $GITHUB_ENV
-          ccache --zero-stats
+          # Whether the restore step actually put anything here. Asking the cache
+          # action is not an option: its key carries the run id so it never
+          # matches exactly, and the output that would say what the restore-keys
+          # matched belongs to actions/cache/restore, not to actions/cache.
+          if [ -d "$D" ] && [ -n "$(ls -A "$D" 2>/dev/null)" ]; then
+            echo "CCACHE_RESTORED=1" >> $GITHUB_ENV
+          fi
+          # $GITHUB_ENV reaches the next step, not this one, so the directory has
+          # to be named again here or the counters zeroed are the default ones.
+          CCACHE_DIR="$D" ccache --zero-stats
 
       - name: Build
         run: |
@@ -97,12 +107,10 @@ jobs:
       - name: ccache statistics
         if: always()
         run: |
-          ccache --show-stats --verbose | head -20
+          ccache --show-stats | head -20
           # A restored cache with no hits means the path or the key is wrong, and
           # the only symptom is a job quietly as slow as a cold one.
-          # cache-matched-key, not cache-hit: the key carries the run id, so it
-          # never matches exactly and cache-hit is false on every run.
-          if [ -n "${{ steps.ccache.outputs.cache-matched-key }}" ]; then
+          if [ -n "${CCACHE_RESTORED:-}" ]; then
             # ccache 4 prints "Hits:". ccache 3, which is what ubuntu:20.04
             # carries, prints "cache hit (direct)" and "(preprocessed)".
             # Reading only the former counts every ccache 3 run as zero hits and
@@ -172,9 +180,19 @@ jobs:
           # the Linux jobs run inside a container where HOME is not the runner's,
           # and a cache step aimed at the wrong directory saves an empty one while
           # reporting nothing wrong.
-          echo "CCACHE_DIR=${{ github.workspace }}/.ccache" >> $GITHUB_ENV
+          D="${{ github.workspace }}/.ccache"
+          echo "CCACHE_DIR=$D" >> $GITHUB_ENV
           echo "CCACHE_MAXSIZE=400M" >> $GITHUB_ENV
-          ccache --zero-stats
+          # Whether the restore step actually put anything here. Asking the cache
+          # action is not an option: its key carries the run id so it never
+          # matches exactly, and the output that would say what the restore-keys
+          # matched belongs to actions/cache/restore, not to actions/cache.
+          if [ -d "$D" ] && [ -n "$(ls -A "$D" 2>/dev/null)" ]; then
+            echo "CCACHE_RESTORED=1" >> $GITHUB_ENV
+          fi
+          # $GITHUB_ENV reaches the next step, not this one, so the directory has
+          # to be named again here or the counters zeroed are the default ones.
+          CCACHE_DIR="$D" ccache --zero-stats
 
       - name: Build
         run: |
@@ -220,12 +238,10 @@ jobs:
       - name: ccache statistics
         if: always()
         run: |
-          ccache --show-stats --verbose | head -20
+          ccache --show-stats | head -20
           # A restored cache with no hits means the path or the key is wrong, and
           # the only symptom is a job quietly as slow as a cold one.
-          # cache-matched-key, not cache-hit: the key carries the run id, so it
-          # never matches exactly and cache-hit is false on every run.
-          if [ -n "${{ steps.ccache.outputs.cache-matched-key }}" ]; then
+          if [ -n "${CCACHE_RESTORED:-}" ]; then
             # ccache 4 prints "Hits:". ccache 3, which is what ubuntu:20.04
             # carries, prints "cache hit (direct)" and "(preprocessed)".
             # Reading only the former counts every ccache 3 run as zero hits and
