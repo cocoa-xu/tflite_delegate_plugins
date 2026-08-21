@@ -232,6 +232,26 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Check the set is complete
+        run: |
+          cd dist
+          ls -l
+          # needs: gates on job success, not on a job having produced anything.
+          # A release missing a target is silent otherwise.
+          expected=4
+          found=$(ls -1 *.tar.gz 2>/dev/null | wc -l)
+          if [ "$found" -ne "$expected" ]; then
+            echo "::error::expected $expected tarballs, found $found"
+            exit 1
+          fi
+          for t in aarch64-apple-darwin x86_64-apple-darwin x86_64-linux-gnu aarch64-linux-gnu; do
+            ls *"$t"*.tar.gz > /dev/null 2>&1 || { echo "::error::no tarball for $t"; exit 1; }
+          done
+          # TFLITE_VER reaches this job through workflow-level env; an empty one
+          # would put "Built against TensorFlow Lite" with no version in the notes.
+          test -n "${TFLITE_VER}" || { echo "::error::TFLITE_VER is empty"; exit 1; }
+          echo "complete: $found tarballs for TFLite ${TFLITE_VER}"
+
       - name: Checksums
         run: |
           cd dist && sha256sum *.tar.gz | tee checksum.txt
