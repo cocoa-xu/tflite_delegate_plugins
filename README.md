@@ -43,14 +43,39 @@ ok = tflite_beam_interpreter_builder:build(Builder, Interpreter).
 Options are passed as a map and forwarded to the plugin:
 
 ```erlang
-tflite_beam_delegate:external(Path, #{allow_precision_loss => true,
-                                      wait_type => passive}).
+%% Metal
+tflite_beam_delegate:external(MetalPath, #{allow_precision_loss => true,
+                                           wait_type => passive}).
+%% OpenCL
+tflite_beam_delegate:external(OpenCLPath, #{is_precision_loss_allowed => true}).
 ```
 
 | plugin | options |
 |---|---|
-| OpenCL | whatever `TfLiteGpuDelegateOptionsV2` parses |
-| Metal | `allow_precision_loss`, `enable_quantization`, `wait_type` (`passive`/`active`/`do_not_wait`/`aggressive`) |
+| Metal | `allow_precision_loss`, `enable_quantization`, `wait_type` (`passive` / `active` / `do_not_wait` / `aggressive`) |
+| OpenCL | **do not pass any** — see below |
+
+**The OpenCL plugin's option parsing is broken upstream.** Every branch of
+`ParseOptions` (`delegates/gpu/delegate.cc`) is written
+
+```c
+if (strcmp(options_keys[i], "is_precision_loss_allowed")) {
+```
+
+and `strcmp` returns **0** on a match, so each test fires on *mismatch*. Every
+value lands in the wrong field, silently. Measured against the built plugin:
+
+| passed | result |
+|---|---|
+| `is_precision_loss_allowed` = `1` | accepted — and stored as `inference_preference` |
+| `is_precision_loss_allowed` = `not_a_number` | refused |
+| `definitely_not_an_option` = `1` | **accepted** — stored as `is_precision_loss_allowed` |
+| `definitely_not_an_option` = `not_a_number` | refused |
+
+An invented option name is accepted; a real one is applied to the next field
+along. Until upstream fixes it, create the OpenCL delegate with no options at
+all — the defaults are what you want anyway. The Metal adaptor is ours, parses
+its three keys correctly, and refuses an unknown key instead of guessing.
 
 ## What to expect from it
 
