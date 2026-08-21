@@ -37,9 +37,12 @@ else
   fail=1
 fi
 
-# OpenCL and Metal are reached through dlopen and the framework loader, so a
-# link-time dependency on either means the plugin will not load on a machine
-# that lacks it, which are exactly the machines it has to fail gracefully on.
+# The allowed set is the system libraries and, on Apple, the system frameworks.
+# OpenCL is deliberately absent from it: the plugin dlopens its driver, so a
+# link-time dependency would stop it loading at all on a machine with no OpenCL,
+# which is exactly the machine it has to decline gracefully on. Metal is a
+# system framework and present everywhere the plugin can run, so linking it
+# costs nothing.
 if [ -n "$bad_deps" ]; then
   note "deps" "unexpected runtime dependencies:"
   echo "$bad_deps" | sed 's/^/             /'
