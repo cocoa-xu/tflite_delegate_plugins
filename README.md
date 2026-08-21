@@ -112,20 +112,24 @@ delegate is applied rather than when the library is opened.
 often ship only `libOpenCL.so.1`; install `ocl-icd-opencl-dev` (Debian/Ubuntu)
 for the symlink.
 
-**A Raspberry Pi 5 cannot use the OpenCL plugin today.** Debian's
-`mesa-opencl-icd` enumerates zero devices there — `gallium-pipe/` ships no
-`pipe_v3d.so` — and reaching VideoCore VII's OpenCL means building Mesa with
-rusticl, which upstream does not yet call production-ready. The plugin loads and
-fails cleanly:
+**On ARM single-board computers the answer varies by board**, and the deciding
+factor is the kernel rather than anything about the plugin. Measured:
 
-```
-INFO: Loaded OpenCL library with dlopen.
-ERROR: No GPU detected.
-ERROR: Restored original execution plan after delegate application failure.
-```
+| board | result |
+|---|---|
+| FriendlyELEC CM3588 (RK3588, Mali-G610) | **2.25x**, output matching the CPU run |
+| Raspberry Pi 5 (VideoCore VII) | no OpenCL device available today |
 
-The interpreter keeps its original graph and the caller gets an error. There is
-no GL fallback: CMake builds define `-DCL_DELEGATE_NO_GL`.
+The CM3588 needs three things, all of them necessary: a kernel binding the GPU
+to **panthor** rather than panfrost (Armbian `current` 6.18.45, not `vendor`
+6.1.115), **`RUSTICL_ENABLE=panthor`** in the environment, and
+`ocl-icd-opencl-dev` for the `libOpenCL.so` symlink. The Pi 5's Mesa has no
+rusticl at all and its distro cannot build one. Full measurements, including
+what the RK3588's NPU does through Mesa's Teflon delegate, are in
+[`docs/arm-sbc.md`](docs/arm-sbc.md).
+
+Where no device is available the plugin fails cleanly — the interpreter keeps
+its original graph and the caller gets an error, rather than a crash.
 
 ## Layout
 

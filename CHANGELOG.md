@@ -32,6 +32,13 @@ from the same TFLite release.
   With `--reject-unknown-options` it also asserts that an adaptor we wrote
   refuses an option it does not know.
 
+- [`docs/arm-sbc.md`](docs/arm-sbc.md): measurements on two ARM boards. The
+  OpenCL plugin runs unmodified on an RK3588's Mali-G610 at **2.25x** with
+  output matching the CPU, given a panthor kernel and `RUSTICL_ENABLE=panthor`.
+  A Raspberry Pi 5 has no OpenCL device available today, for packaging reasons
+  documented there. Also records why the RK3588's NPU is not usable through
+  TFLite yet.
+
 ### Fixed
 
 Four defects in TensorFlow Lite's own build and runtime, worked around here and
