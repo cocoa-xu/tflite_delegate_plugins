@@ -21,6 +21,13 @@ on:
       - ".gitignore"
   workflow_dispatch:
 
+# A push supersedes the run before it on the same branch. Deliberately not in
+# release.yml: a tag build that gets cancelled leaves a release with no
+# artifacts in it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     uses: ./.github/workflows/build.yml
