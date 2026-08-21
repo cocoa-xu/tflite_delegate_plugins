@@ -11,11 +11,21 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
 endif()
 
+# neon2sse, pulled in on x86, declares a cmake_minimum_required that CMake 4
+# refuses outright.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
+
 if(TENSORFLOW_SOURCE_DIR STREQUAL "")
   include(FetchContent)
+  # DOWNLOAD_EXTRACT_TIMESTAMP arrived in 3.24; older CMake reads it as another
+  # URL entry and fails with "At least one entry of URL is a path".
+  set(TFLITE_FETCH_EXTRA "")
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.24)
+    set(TFLITE_FETCH_EXTRA DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+  endif()
   FetchContent_Declare(tensorflow
     URL "https://github.com/tensorflow/tensorflow/archive/refs/tags/v${TFLITE_VER}.zip"
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    ${TFLITE_FETCH_EXTRA}
   )
   FetchContent_MakeAvailable(tensorflow)
   set(TENSORFLOW_SOURCE_DIR "${tensorflow_SOURCE_DIR}" CACHE PATH "" FORCE)

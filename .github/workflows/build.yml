@@ -74,7 +74,7 @@ jobs:
           if [ "${{ matrix.arch }}" = "aarch64" ]; then
             apt-get install -y -qq gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
           fi
-          curl -fsSL "https://github.com/Kitware/CMake/releases/download/v3.22.6/cmake-3.22.6-linux-$(uname -m).tar.gz" -o /tmp/cmake.tar.gz
+          curl -fsSL "https://github.com/Kitware/CMake/releases/download/v3.28.6/cmake-3.28.6-linux-$(uname -m).tar.gz" -o /tmp/cmake.tar.gz
           tar -xzf /tmp/cmake.tar.gz --strip-components=1 -C /usr/local
 
       - uses: actions/checkout@v7
