@@ -33,7 +33,7 @@ host can be asked directly:
 
 ```erlang
 1> tflite_beam:tflite_version().
-<<"2.21.0">>
+<<"2.2.0">>
 ```
 
 Take the plugins from the release whose notes name that same version. A
@@ -170,8 +170,16 @@ $ cmake --build build -j
 $ ./scripts/verify_plugin.sh build/lib/libtflite_metal_delegate.dylib
 ```
 
-The TensorFlow sources are downloaded to match `TFLITE_VER` (default 2.21.0).
-Point `-D TENSORFLOW_SOURCE_DIR=<path>` at an existing tree to skip that.
+The runtime is built from LiteRT's `tflite` subtree, downloaded to match
+`LITERT_VER` (default 2.2.0). LiteRT's own build also reaches into TensorFlow for
+`compiler/mlir/lite`, TSL and XLA, so that is downloaded too, to match
+`TFLITE_VER` (default 2.21.0-rc0, the release LiteRT pins). Point
+`-D LITERT_SOURCE_DIR=<path>` or `-D TENSORFLOW_SOURCE_DIR=<path>` at existing
+trees to skip either download.
+
+Do not mix the two versions: they carry the same flatbuffer schema today, and a
+build that pairs them differently links two definitions of the same tables
+without saying so.
 
 Building for another architecture is best done natively. CI uses GitHub's
 arm64 runners, and an arm64 Linux container on an Apple Silicon host does the
@@ -186,10 +194,10 @@ $ cmake -S . -B build \
     -D TFLITE_HOST_TOOLS_DIR=<dir containing a host flatc>
 ```
 
-That `flatc` must match the flatbuffers version TensorFlow bundles (v25.9.23 for
-TFLite 2.21.0), which is why building natively is the shorter path.
+That `flatc` must match the flatbuffers version LiteRT bundles (v25.9.23 for LiteRT
+2.2.0), which is why building natively is the shorter path.
 
 ## License
 
 Apache-2.0, matching TensorFlow. `plugins/metal/plugin_adaptor.mm` is shaped after
-`tensorflow/lite/delegates/utils/dummy_delegate/external_delegate_adaptor.cc`.
+`tflite/delegates/utils/dummy_delegate/external_delegate_adaptor.cc`.

@@ -11,6 +11,10 @@ person to wonder "what about Core ML?" should not have to spend another one.
 M4 Max, macOS 15.7.3, TFLite 2.21.0, through
 `tflite_beam_delegate:external/1`.
 
+Measured before the runtime moved to LiteRT's `tflite` subtree, so the figures
+below describe TFLite 2.21.0 rather than what this repo now builds. Nothing here
+suggests the conclusion changed, but nobody has re-run it.
+
 | model | nodes delegated | vs XNNPACK |
 |---|---|---|
 | `add.bin` (2 ops, float32) | **2 / 2** | n/a |

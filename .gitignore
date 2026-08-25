@@ -1,4 +1,6 @@
 build/
+# any build directory, not just the one named exactly "build"
+build*/
 _build/
 dist/
 *.so

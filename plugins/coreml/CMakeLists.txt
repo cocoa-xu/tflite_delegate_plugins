@@ -51,13 +51,10 @@ set_target_properties(coreml_mlmodel_proto PROPERTIES POSITION_INDEPENDENT_CODE 
 # ships a static one, so the Core ML sources are listed here instead. The glob
 # below takes .cc only, which leaves builders/test_util.mm out on its own; the
 # filter is what drops builders/util_test.cc.
-set(COREML_SRC_DIR "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/delegates/coreml")
-# coreml_delegate.mm needs its Neural Engine detection corrected; see
-# tflite_patch_coreml_neural_engine in cmake/UpstreamPatches.cmake.
-tflite_patch_coreml_neural_engine(COREML_DELEGATE_PATCHED)
+set(COREML_SRC_DIR "${LITERT_SOURCE_DIR}/tflite/delegates/coreml")
 
 set(COREML_DELEGATE_SOURCES
-  "${COREML_DELEGATE_PATCHED}"
+  "${COREML_SRC_DIR}/coreml_delegate.mm"
   "${COREML_SRC_DIR}/coreml_delegate_kernel.mm"
   "${COREML_SRC_DIR}/coreml_executor.mm"
 )

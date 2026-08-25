@@ -6,9 +6,9 @@
 #include <cstring>
 #include <string>
 
-#include "tensorflow/lite/core/c/common.h"
-#include "tensorflow/lite/delegates/external/external_delegate_interface.h"
-#include "tensorflow/lite/delegates/gpu/metal_delegate.h"
+#include "tflite/core/c/common.h"
+#include "tflite/delegates/external/external_delegate_interface.h"
+#include "tflite/delegates/gpu/metal_delegate.h"
 
 namespace {
 
