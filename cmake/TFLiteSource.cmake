@@ -73,6 +73,16 @@ set(CMAKE_CXX_STANDARD ${LITERT_CXX_STANDARD})
 set(CMAKE_OBJCXX_STANDARD ${LITERT_CXX_STANDARD})
 message(STATUS "LiteRT builds at C++${LITERT_CXX_STANDARD}; Objective-C++ follows")
 
+# LiteRT fetches Eigen by cloning gitlab.com, which throttles under load. The
+# mirror is a plain copy carrying the same commit, so LiteRT's pin still decides
+# which Eigen is used and only the host changes. OverridableFetchContent reads
+# this name for the content it calls "eigen".
+if(NOT OVERRIDABLE_FETCH_CONTENT_eigen_GIT_REPOSITORY)
+  set(OVERRIDABLE_FETCH_CONTENT_eigen_GIT_REPOSITORY
+      "https://github.com/cocoa-xu/eigen.git" CACHE STRING
+      "Where to fetch Eigen from; the commit is still pinned by LiteRT")
+endif()
+
 set(TFLITE_ENABLE_GPU ON CACHE BOOL "" FORCE)
 set(TFLITE_ENABLE_XNNPACK OFF CACHE BOOL "" FORCE)
 if(APPLE)
