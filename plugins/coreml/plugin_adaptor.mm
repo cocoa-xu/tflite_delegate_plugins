@@ -7,12 +7,12 @@
 #include <cstring>
 #include <string>
 
-#include "tensorflow/lite/core/c/common.h"
-#include "tensorflow/lite/delegates/external/external_delegate_interface.h"
+#include "tflite/core/c/common.h"
+#include "tflite/delegates/external/external_delegate_interface.h"
 #include <cerrno>
 #include <climits>
 
-#include "tensorflow/lite/delegates/coreml/coreml_delegate.h"
+#include "tflite/delegates/coreml/coreml_delegate.h"
 
 namespace {
 

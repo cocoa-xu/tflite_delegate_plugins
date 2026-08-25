@@ -7,7 +7,17 @@ project(tflite_delegate_plugins
   LANGUAGES CXX
 )
 
-set(TFLITE_VER "2.21.0" CACHE STRING "TensorFlow Lite version to build against")
+# The runtime these plugins are loaded into is built from LiteRT's tflite
+# subtree, so LITERT_VER is the version a plugin has to match. It is what
+# tflite_beam:tflite_version/0 answers, and a mismatch there is undefined
+# behaviour rather than an error: there is no binary stable delegate interface.
+set(LITERT_VER "2.2.0" CACHE STRING "LiteRT version to build against")
+set(LITERT_SOURCE_DIR "" CACHE PATH "Existing LiteRT source tree; downloaded when empty")
+# TensorFlow is a build dependency of LiteRT rather than the source of the
+# runtime: its CMake reaches into compiler/mlir/lite, TSL and XLA. The version
+# is the one LiteRT pins, and mismatching it links two different definitions of
+# the same flatbuffer tables.
+set(TFLITE_VER "2.21.0-rc0" CACHE STRING "TensorFlow release LiteRT builds against")
 set(TENSORFLOW_SOURCE_DIR "" CACHE PATH "Existing TensorFlow source tree; downloaded when empty")
 
 option(TFLITE_PLUGINS_OPENCL "Build the OpenCL GPU delegate plugin" ON)
@@ -17,11 +27,13 @@ option(TFLITE_PLUGINS_METAL "Build the Metal delegate plugin (Apple only)" ON)
 option(TFLITE_PLUGINS_COREML "Build the Core ML delegate plugin (Apple only, see docs/coreml.md)" OFF)
 option(TFLITE_PLUGINS_INSTALL "Generate install rules" ON)
 
+# A floor, not the number that ends up being used: TFLiteSource raises both to
+# whatever LiteRT builds at, which is 20 today. CMAKE_CXX_STANDARD does not
+# govern Objective-C++, which is why the second one has to be said at all: a .mm
+# left behind at 17 while the archives around it are at 20 does not fail to
+# compile, it fails to link, on a symbol that is visibly in the archive.
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# CMAKE_CXX_STANDARD does not govern Objective-C++, so without this the .mm
-# sources compile at whatever the compiler defaults to and can end up at a
-# different standard from the .cc sources in the same static library.
 set(CMAKE_OBJCXX_STANDARD 17)
 set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -43,6 +55,14 @@ include(TFLiteSource)     # locate or download TFLite, then add it
 include(UpstreamFixups)   # defects in TFLite's own build, worked around here
 include(UpstreamPatches)  # corrections to TFLite's own sources
 include(PluginTarget)     # tflite_plugin_add_library()
+
+# enable_language has to be called at directory scope, not from inside the
+# function that needs it: from there CMake configures but then fails to generate
+# with "required internal CMake variable not set".
+if(APPLE)
+  enable_language(OBJCXX)
+endif()
+tflite_fixup_metal_delegate()
 
 add_subdirectory(plugins)
 

@@ -5,7 +5,11 @@ on:
     tags: ["v*"]
 
 env:
-  TFLITE_VER: "2.21.0"
+  # LITERT_VER is the one a host has to match: the runtime comes from LiteRT's
+  # tflite subtree and tflite_beam:tflite_version/0 answers it. TFLITE_VER names
+  # the TensorFlow release LiteRT builds against and matches nothing a user sees.
+  LITERT_VER: "2.2.0"
+  TFLITE_VER: "2.21.0-rc0"
 
 jobs:
   build:
@@ -57,10 +61,11 @@ jobs:
               [ -f "$f" ] || { echo "::error::missing $f"; exit 1; }
             done
           done
-          # TFLITE_VER reaches this job through workflow-level env; an empty one
-          # would put "Built against TensorFlow Lite" with no version in the notes.
-          test -n "${TFLITE_VER}" || { echo "::error::TFLITE_VER is empty"; exit 1; }
-          echo "complete: $found tarballs for TFLite ${TFLITE_VER}"
+          # LITERT_VER reaches this job through workflow-level env; an empty one
+          # would put "Built against LiteRT" with no version in the notes, and
+          # the version is the whole of what makes a plugin loadable.
+          test -n "${LITERT_VER}" || { echo "::error::LITERT_VER is empty"; exit 1; }
+          echo "complete: $found tarballs for LiteRT ${LITERT_VER}"
 
       - uses: softprops/action-gh-release@v3
         with:
@@ -68,14 +73,14 @@ jobs:
             dist/*.tar.gz
             dist/*.tar.gz.sha256
           body: |
-            Built against **TensorFlow Lite ${{ env.TFLITE_VER }}**.
+            Built against **LiteRT ${{ env.LITERT_VER }}**.
 
-            A plugin only works with a host built from the same TFLite release.
+            A plugin only works with a host built from the same LiteRT release.
             Upstream provides no binary-stable delegate interface, and a
             mismatch is undefined behaviour rather than a clean error. Check the host with:
 
             ```erlang
-            tflite_beam:tflite_version().  %% must be <<"${{ env.TFLITE_VER }}">>
+            tflite_beam:tflite_version().  %% must be <<"${{ env.LITERT_VER }}">>
             ```
 
             Debug symbols are published separately as

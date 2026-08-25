@@ -10,25 +10,25 @@
 #     upstream moves the code, the build must say so rather than quietly
 #     producing a plugin without the fix.
 #
-# Each function records the versions it was verified against. TFLITE_VER outside
+# Each function records the versions it was verified against. LITERT_VER outside
 # that list is a warning: the patch still applies if it matches, but nobody has
 # checked the result.
 
 function(_tflite_patch_verified_for patch_name)
-  # TFLITE_VER names the release this build downloads. A caller who supplied
-  # their own TENSORFLOW_SOURCE_DIR can leave it at the default while pointing
-  # at any version at all, so it says nothing about the tree being patched and
-  # the check has to say so rather than pass quietly.
+  # LITERT_VER names the release this build downloads. A caller who supplied
+  # their own LITERT_SOURCE_DIR can leave it at the default while pointing at
+  # any version at all, so it says nothing about the tree being patched and the
+  # check has to say so rather than pass quietly.
   if(TFLITE_SOURCE_WAS_SUPPLIED)
     message(WARNING
-      "${patch_name} is being applied to a TensorFlow tree this build did not "
+      "${patch_name} is being applied to a LiteRT tree this build did not "
       "fetch, so its version is unknown. It was verified against ${ARGN}.")
     return()
   endif()
-  list(FIND ARGN "${TFLITE_VER}" _found)
+  list(FIND ARGN "${LITERT_VER}" _found)
   if(_found EQUAL -1)
     message(WARNING
-      "${patch_name} was verified against ${ARGN}, not TFLite ${TFLITE_VER}. "
+      "${patch_name} was verified against ${ARGN}, not LiteRT ${LITERT_VER}. "
       "It will be applied if it still matches; check the result.")
   endif()
 endfunction()
@@ -41,9 +41,9 @@ endfunction()
 #
 # out_var receives the path to the corrected copy.
 function(tflite_patch_opencl_parse_options out_var)
-  _tflite_patch_verified_for("opencl_parse_options" "2.21.0")
+  _tflite_patch_verified_for("opencl_parse_options" "2.2.0")
 
-  set(_src "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/delegates/gpu/delegate.cc")
+  set(_src "${LITERT_SOURCE_DIR}/tflite/delegates/gpu/delegate.cc")
   set(_out "${CMAKE_CURRENT_BINARY_DIR}/patched")
   file(MAKE_DIRECTORY "${_out}")
 
@@ -59,7 +59,7 @@ function(tflite_patch_opencl_parse_options out_var)
   if(NOT _count EQUAL _expected_tests)
     message(FATAL_ERROR
       "opencl_parse_options expected ${_expected_tests} inverted strcmp tests in "
-      "ParseOptions and found ${_count}. Either TFLite ${TFLITE_VER} fixed some or "
+      "ParseOptions and found ${_count}. Either LiteRT ${LITERT_VER} fixed some or "
       "all of them, in which case rewrite or delete this patch, or the code moved. "
       "Patching a subset is worse than patching none.")
   endif()
@@ -120,36 +120,9 @@ endfunction()
 #
 # It has one caller and decides only whether Create refuses; it takes no part in
 # any computation.
-function(tflite_patch_coreml_neural_engine out_var)
-  _tflite_patch_verified_for("coreml_neural_engine" "2.21.0")
-
-  set(_src "${TENSORFLOW_SOURCE_DIR}/tensorflow/lite/delegates/coreml/coreml_delegate.mm")
-  set(_out "${CMAKE_CURRENT_BINARY_DIR}/patched")
-  file(MAKE_DIRECTORY "${_out}")
-
-  set(_from [==[    return major_version >= 11;
-  }
-  return false;
-}]==])
-  set(_to [==[    return major_version >= 11;
-  }
-#if TARGET_OS_OSX
-  // Patched by tflite_delegate_plugins: every Apple silicon Mac has a Neural
-  // Engine, and uname reports "arm64" there, matching neither prefix above.
-  if (strncmp("arm64", system_info.machine, 5) == 0) return true;
-#endif
-  return false;
-}]==])
-
-  file(READ "${_src}" _text)
-  string(FIND "${_text}" "${_from}" _at)
-  if(_at EQUAL -1)
-    message(FATAL_ERROR
-      "coreml_neural_engine could not match IsNeuralEngineAvailable in TFLite "
-      "${TFLITE_VER}. Re-read the function before updating this patch.")
-  endif()
-  string(REPLACE "${_from}" "${_to}" _text "${_text}")
-  file(WRITE "${_out}/coreml_delegate.mm" "${_text}")
-  message(STATUS "patched coreml_neural_engine: Apple silicon now recognised")
-  set(${out_var} "${_out}/coreml_delegate.mm" PARENT_SCOPE)
-endfunction()
+# tflite_patch_coreml_neural_engine used to live here. It taught the Core ML
+# delegate that every Apple silicon Mac has a Neural Engine, which TFLite 2.21.0
+# did not know: uname reports "arm64" there and the detection only matched the
+# iPad and iPhone prefixes. LiteRT 2.2.0 handles it upstream, under TARGET_OS_OSX
+# and __aarch64__ rather than by comparing the machine string, so there is
+# nothing left to correct.

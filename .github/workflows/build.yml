@@ -6,7 +6,11 @@ on:
   workflow_call:
 
 env:
-  TFLITE_VER: "2.21.0"
+  # LITERT_VER is what a plugin has to match: the runtime is built from LiteRT's
+  # tflite subtree. TFLITE_VER is the TensorFlow release LiteRT's own build
+  # reaches into for compiler/mlir/lite, TSL and XLA.
+  LITERT_VER: "2.2.0"
+  TFLITE_VER: "2.21.0-rc0"
 
 jobs:
   macos:
@@ -28,6 +32,12 @@ jobs:
           path: build/_deps/tensorflow-src
           key: tf-src-${{ env.TFLITE_VER }}
 
+      - name: Cache LiteRT sources
+        uses: actions/cache@v6
+        with:
+          path: build/_deps/litert-src
+          key: litert-src-${{ env.LITERT_VER }}
+
       - name: Install ccache
         run: brew install ccache
 
@@ -36,9 +46,9 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ github.workspace }}/.ccache
-          key: ccache-${{ matrix.triple }}-${{ env.TFLITE_VER }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.run_id }}
+          key: ccache-${{ matrix.triple }}-${{ env.LITERT_VER }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.run_id }}
           restore-keys: |
-            ccache-${{ matrix.triple }}-${{ env.TFLITE_VER }}-${{ hashFiles('CMakeLists.txt') }}-
+            ccache-${{ matrix.triple }}-${{ env.LITERT_VER }}-${{ hashFiles('CMakeLists.txt') }}-
             ccache-${{ matrix.triple }}-${{ env.TFLITE_VER }}-
             ccache-${{ matrix.triple }}-
 
@@ -66,7 +76,7 @@ jobs:
 
       - name: Build
         run: |
-          cmake -S . -B build -D CMAKE_BUILD_TYPE=RelWithDebInfo -D TFLITE_VER="${TFLITE_VER}" -D TFLITE_PLUGINS_COREML=OFF -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake -S . -B build -D CMAKE_BUILD_TYPE=RelWithDebInfo -D LITERT_VER="${LITERT_VER}" -D TFLITE_VER="${TFLITE_VER}" -D TFLITE_PLUGINS_COREML=OFF -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build build -j$(sysctl -n hw.ncpu)
 
       - name: Verify
@@ -159,16 +169,22 @@ jobs:
         uses: actions/cache@v6
         with:
           path: build/_deps/tensorflow-src
-          key: tf-src-${{ env.TFLITE_VER }}-${{ matrix.arch }}
+          key: tf-src-${{ env.TFLITE_VER }}
+
+      - name: Cache LiteRT sources
+        uses: actions/cache@v6
+        with:
+          path: build/_deps/litert-src
+          key: litert-src-${{ env.LITERT_VER }}-${{ matrix.arch }}
 
       - name: Restore ccache
         id: ccache
         uses: actions/cache@v6
         with:
           path: ${{ github.workspace }}/.ccache
-          key: ccache-${{ matrix.triple }}-${{ env.TFLITE_VER }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.run_id }}
+          key: ccache-${{ matrix.triple }}-${{ env.LITERT_VER }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.run_id }}
           restore-keys: |
-            ccache-${{ matrix.triple }}-${{ env.TFLITE_VER }}-${{ hashFiles('CMakeLists.txt') }}-
+            ccache-${{ matrix.triple }}-${{ env.LITERT_VER }}-${{ hashFiles('CMakeLists.txt') }}-
             ccache-${{ matrix.triple }}-${{ env.TFLITE_VER }}-
             ccache-${{ matrix.triple }}-
 
@@ -196,7 +212,7 @@ jobs:
 
       - name: Build
         run: |
-          cmake -S . -B build -G Ninja -D CMAKE_BUILD_TYPE=RelWithDebInfo -D TFLITE_VER="${TFLITE_VER}" -D TFLITE_PLUGINS_COREML=OFF -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake -S . -B build -G Ninja -D CMAKE_BUILD_TYPE=RelWithDebInfo -D LITERT_VER="${LITERT_VER}" -D TFLITE_VER="${TFLITE_VER}" -D TFLITE_PLUGINS_COREML=OFF -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build build -j$(nproc)
 
       - name: Verify
