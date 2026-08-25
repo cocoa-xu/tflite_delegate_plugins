@@ -159,7 +159,11 @@ jobs:
         run: |
           export DEBIAN_FRONTEND=noninteractive
           apt-get update -qq
-          apt-get install -y -qq build-essential curl git unzip ca-certificates python3 ninja-build binutils ccache
+          # gcc-10 as well as build-essential: focal's default is 9, and the
+          # abseil LiteRT pins refuses anything below 10. Staying on focal is
+          # what keeps glibc at 2.31, so the compiler moves and the sysroot does
+          # not.
+          apt-get install -y -qq build-essential gcc-10 g++-10 curl git unzip ca-certificates python3 ninja-build binutils ccache
           curl -fsSL "https://github.com/Kitware/CMake/releases/download/v3.28.6/cmake-3.28.6-linux-$(uname -m).tar.gz" -o /tmp/cmake.tar.gz
           tar -xzf /tmp/cmake.tar.gz --strip-components=1 -C /usr/local
 
@@ -212,6 +216,7 @@ jobs:
 
       - name: Build
         run: |
+          export CC=/usr/bin/gcc-10 CXX=/usr/bin/g++-10
           cmake -S . -B build -G Ninja -D CMAKE_BUILD_TYPE=RelWithDebInfo -D LITERT_VER="${LITERT_VER}" -D TFLITE_VER="${TFLITE_VER}" -D TFLITE_PLUGINS_COREML=OFF -D CMAKE_C_COMPILER_LAUNCHER=ccache -D CMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build build -j$(nproc)
 
