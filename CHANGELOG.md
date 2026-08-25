@@ -4,12 +4,18 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [semantic versioning](https://semver.org/).
 
-Note that the TensorFlow Lite version a release was built against is
-independent of this project's version, and is named in the release notes rather
-than in any filename. Upstream provides no binary-stable delegate interface, so
-a plugin is only valid for a host built from the same TFLite release.
+Note that the LiteRT version a release was built against is independent of this
+project's version, and is named in the release notes rather than in any
+filename. Upstream provides no binary-stable delegate interface, so a plugin is
+only valid for a host built from the same LiteRT release, which is the number
+`tflite_beam:tflite_version/0` answers.
 
-## [Unreleased]
+## [0.1.0] - 2026-08-26
+
+Built against LiteRT 2.2.0. A plugin only loads into a host built from the same
+release, so this pairs with tflite_beam 1.0.0-rc1 and later, not with the 0.x
+line, which was built from TensorFlow's `tensorflow/lite` instead.
+
 
 ### Added
 
@@ -21,8 +27,7 @@ a plugin is only valid for a host built from the same TFLite release.
   computes correctly, but upstream's delegate accepts only operator version 1
   and only float32, so it delegates no nodes from any current model. The build
   generates 33 coremltools protobuf definitions and compiles the 19 delegate
-  sources that upstream provides no CMake target for, and patches
-  `IsNeuralEngineAvailable()` so Apple silicon is recognised. See
+  sources that upstream provides no CMake target for. See
   [`docs/coreml.md`](docs/coreml.md).
 - `scripts/verify_plugin.sh`, run in CI on every target: fails the build unless
   exactly the two plugin entry points are exported and nothing but system
@@ -46,11 +51,12 @@ TFLite's OpenCL delegate tested every option key with a bare `strcmp` and so
 acted on the mismatches instead of the matches, which meant an invented key was
 accepted and a real one landed in the next field along. Options passed to the
 plugin now do what they say. The correction is applied to a copy of upstream's
-source at configure time, alongside a second one that lets Core ML's Neural
-Engine check see Apple silicon; both live in `cmake/UpstreamPatches.cmake`.
+source at configure time and lives in `cmake/UpstreamPatches.cmake`. A second
+patch used to sit beside it, teaching Core ML's Neural Engine check to see Apple
+silicon; LiteRT does that upstream, so it was deleted rather than carried.
 
 `cmake/UpstreamFixups.cmake` holds the rest of what this build has to smooth
 over, each explained at the point it is applied. One of them is not a defect but
-a version window: 2.21.0 was tagged five months before the change that gives
-`tensorflow-lite` its absl logging dependency, so a shared library linked
-against it needs that spelled out. It goes away when TFLITE_VER does.
+a version window: the release this builds against was tagged before the change
+that gives `tensorflow-lite` its absl logging dependency, so a shared library
+linked against it needs that spelled out. Still open against LiteRT 2.2.0.

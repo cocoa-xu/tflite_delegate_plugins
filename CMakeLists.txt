@@ -66,4 +66,4 @@ tflite_fixup_metal_delegate()
 
 add_subdirectory(plugins)
 
-message(STATUS "${PROJECT_NAME} ${PROJECT_VERSION}: TFLite ${TFLITE_VER} from ${TENSORFLOW_SOURCE_DIR}")
+message(STATUS "${PROJECT_NAME} ${PROJECT_VERSION}: LiteRT ${LITERT_VER} from ${LITERT_SOURCE_DIR}, TensorFlow ${TFLITE_VER} from ${TENSORFLOW_SOURCE_DIR}")
